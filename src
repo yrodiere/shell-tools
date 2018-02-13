@@ -11,6 +11,9 @@ function list() {
 		"spi")
 			FILTERS=(-path '*/src/main/*' -path '*/spi/*' -not -path '*/impl/*')
 			;;
+		"public")
+			FILTERS=(-path '*/src/main/*' -not -path '*/impl/*')
+			;;
 		"impl")
 			FILTERS=(-path '*/src/main/*' -path '*/impl/*' -not -path '*/spi/*')
 			;;
@@ -61,6 +64,10 @@ function diff() {
 			(( $# == 0 )) || DIRS=(":*/spi/*.java")
 			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
 			;;
+		"public")
+			(( $# == 0 )) || DIRS=(":*.java")
+			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			;;
 		"impl")
 			(( $# == 0 )) || DIRS=(":*/impl/*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
@@ -101,7 +108,7 @@ do
 			;;
 		f)
 			case "$OPTARG" in
-				"api"|"spi"|"impl"|"test"|"main"|"all")
+				"api"|"spi"|"public"|"impl"|"test"|"main"|"all")
 					FILTER="$OPTARG"
 					;;
 				*)
