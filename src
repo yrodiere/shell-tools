@@ -116,7 +116,6 @@ do
 	esac
 done
 
-echo $OPTIND
 shift $(( OPTIND - 1 ))
 
 $FEATURE "$@"
