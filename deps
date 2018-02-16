@@ -1,0 +1,11 @@
+#!/bin/bash -e
+# Retrieve information about dependencies of an external Maven artifact
+
+TMPDIR=$(mktemp -d)
+
+mvn -q dependency:copy -Dartifact="$1:pom" -DoutputDirectory="$TMPDIR"
+
+mvn -o dependency:tree -f "$TMPDIR"/*.pom
+
+rm -r "$TMPDIR"
+
