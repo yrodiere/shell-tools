@@ -39,7 +39,7 @@ function count() {
 	done
 }
 
-function blame() {
+function git_blame() {
 	for DIR in "${@}"
 	do
 		echo "$DIR: "
@@ -49,7 +49,7 @@ function blame() {
 	done
 }
 
-function diff() {
+function git_history() {
 	local RANGE=$1
 	shift
 	declare -a DIRS
@@ -88,10 +88,49 @@ function diff() {
 	tig log --cherry-pick --right-only $RANGE -- "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
 }
 
+function git_diff() {
+	local RANGE=$1
+	shift
+	declare -a DIRS
+	DIRS=("${@}")
+	declare -a NEGATIVE_FILTERS
+	case "$FILTER" in
+		"api")
+			(( $# == 0 )) || DIRS=(":*.java")
+			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/impl/*' ':!*/src/test/*')
+			;;
+		"spi")
+			(( $# == 0 )) || DIRS=(":*/spi/*.java")
+			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			;;
+		"public")
+			(( $# == 0 )) || DIRS=(":*.java")
+			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			;;
+		"impl")
+			(( $# == 0 )) || DIRS=(":*/impl/*.java")
+			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
+			;;
+		"main")
+			(( $# == 0 )) || DIRS=(":*.java")
+			NEGATIVE_FILTERS=(":!*/src/test/*")
+			;;
+		"test")
+			(( $# == 0 )) || DIRS=(":*/src/test/*.java")
+			NEGATIVE_FILTERS=()
+			;;
+		"all")
+			(( $# == 0 )) || DIRS=(":*.java")
+			NEGATIVE_FILTERS=()
+			;;
+	esac
+	git diff --patch-with-stat --cherry-pick --right-only $RANGE -- "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
+}
+
 FEATURE=count
 FILTER=nontest
 
-while getopts 'clbdf:' opt
+while getopts 'clbdhf:' opt
 do
 	case "$opt" in
 		c)
@@ -101,10 +140,13 @@ do
 			FEATURE=list
 			;;
 		b)
-			FEATURE=blame
+			FEATURE=git_blame
 			;;
 		d)
-			FEATURE=diff
+			FEATURE=git_diff
+			;;
+		h)
+			FEATURE=git_history
 			;;
 		f)
 			case "$OPTARG" in
