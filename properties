@@ -1,0 +1,17 @@
+#!/bin/bash
+
+DIR=.
+PROPERTY_PATTERN='version\..*'
+if (( $# > 0 ))
+then
+	DIR="$1"
+	shift
+fi
+if (( $# > 0 ))
+then
+	PROPERTY_PATTERN="$1"
+	shift
+fi
+
+grep -ER --include pom.xml -h '^\s*<('"$PROPERTY_PATTERN"')>.*<\/\1>' "$DIR" | sed -E 's/^\s*<('"$PROPERTY_PATTERN"')>(.*)<\/\1>.*/\1\t\2/' | sort | uniq
+
