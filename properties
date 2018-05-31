@@ -13,5 +13,6 @@ then
 	shift
 fi
 
-grep -ER --include pom.xml -h '^\s*<('"$PROPERTY_PATTERN"')>.*<\/\1>' "$DIR" | sed -E 's/^\s*<('"$PROPERTY_PATTERN"')>(.*)<\/\1>.*/\1\t\2/' | sort | uniq
+grep -ER --include pom.xml -h '^\s*<('"$PROPERTY_PATTERN"')>.*<\/\1>' "$DIR" | sed -E 's/^\s*<('"$PROPERTY_PATTERN"')>(.*)<\/\1>.*/\1 \2/' \
+	| LC_COLLATE=C sort -u -t $'\t'
 
