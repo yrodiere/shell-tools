@@ -57,31 +57,31 @@ function git_history() {
 	declare -a NEGATIVE_FILTERS
 	case "$FILTER" in
 		"api")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/impl/*' ':!*/src/test/*')
 			;;
 		"spi")
-			(( $# == 0 )) || DIRS=(":*/spi/*.java")
+			(( $# != 0 )) || DIRS=(":*/spi/*.java")
 			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
 			;;
 		"public")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
 			;;
 		"impl")
-			(( $# == 0 )) || DIRS=(":*/impl/*.java")
+			(( $# != 0 )) || DIRS=(":*/impl/*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
 			;;
 		"main")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=(":!*/src/test/*")
 			;;
 		"test")
-			(( $# == 0 )) || DIRS=(":*/src/test/*.java")
+			(( $# != 0 )) || DIRS=(":*/src/test/*.java")
 			NEGATIVE_FILTERS=()
 			;;
 		"all")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=()
 			;;
 	esac
@@ -96,31 +96,31 @@ function git_diff() {
 	declare -a NEGATIVE_FILTERS
 	case "$FILTER" in
 		"api")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/impl/*' ':!*/src/test/*')
 			;;
 		"spi")
-			(( $# == 0 )) || DIRS=(":*/spi/*.java")
+			(( $# != 0 )) || DIRS=(":*/spi/*.java")
 			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
 			;;
 		"public")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
 			;;
 		"impl")
-			(( $# == 0 )) || DIRS=(":*/impl/*.java")
+			(( $# != 0 )) || DIRS=(":*/impl/*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
 			;;
 		"main")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=(":!*/src/test/*")
 			;;
 		"test")
-			(( $# == 0 )) || DIRS=(":*/src/test/*.java")
+			(( $# != 0 )) || DIRS=(":*/src/test/*.java")
 			NEGATIVE_FILTERS=()
 			;;
 		"all")
-			(( $# == 0 )) || DIRS=(":*.java")
+			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=()
 			;;
 	esac
