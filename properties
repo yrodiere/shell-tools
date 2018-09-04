@@ -1,18 +1,75 @@
 #!/bin/bash
 
-DIR=.
-PROPERTY_PATTERN='version\..*'
-if (( $# > 0 ))
-then
-	DIR="$1"
-	shift
-fi
-if (( $# > 0 ))
-then
-	PROPERTY_PATTERN="$1"
-	shift
-fi
+function log() {
+        echo 1>&2 "${@}"
+}
 
-grep -ER --include pom.xml -h '^\s*<('"$PROPERTY_PATTERN"')>.*<\/\1>' "$DIR" | sed -E 's/^\s*<('"$PROPERTY_PATTERN"')>(.*)<\/\1>.*/\1\t\2/' \
-	| LC_COLLATE=C sort -u -t $'\t'
+function abort() {
+        log "${@}"
+        log 'Aborting.'
+        exit 1
+}
+
+function success() {
+        log "${@}"
+        exit 0
+}
+
+function usage() {
+        log -e "$(cat <<EOF
+Usage:
+	$0 [<options>] [<root_directory>]
+        root_directory
+                The directory to search POM files in.
+        -c
+                Count duplicate properties instead of displaying values.
+        -p
+                Only consider properties matching the given pattern.
+EOF
+)"
+}
+
+DIR=.
+PROPERTY_PATTERN='.*'
+COUNT_DUPLICATES=0
+
+while getopts 'dp' opt
+do
+        case "$opt" in
+                d)
+			COUNT_DUPLICATES=1
+                        ;;
+                p)
+			PROPERTY_PATTERN="$OPTARG"
+                        ;;
+                \?)
+			usage
+			abort
+                        ;;
+        esac
+done
+
+shift $(( OPTIND - 1 ))
+
+(( $# > 0 )) && DIR="$1" && shift
+(( $# > 0 )) && { usage; abort; }
+
+find "$DIR" -name pom.xml | \
+	xargs -r perl -n -e "
+			\$print = 0 if $ ~= /<\\/properties>/;
+			if (\$print and $ ~= /<[^!\\/].*>/ and $ ~= /<$PROPERTY_PATTERN>/) {
+				s(.*<([^!/][^>]+)>(.*)</\\1>.*)(\\1\\t\\2) or s(^\s*<([^!/][^> ]+)\s*/> *$)(\\1\\t) or s(.*<([^!/][^>]+)>.*)(\\1\\t<unknown, multiline>);
+				print;
+			}
+			\$print = 1 if $ ~= /<properties>/;
+		" | \
+	{
+		if (( $COUNT_DUPLICATES ))
+		then
+			cut -f 1 -d$'\t' | LC_COLLATE=C sort -t  $'\t' | uniq -c | grep -Ev '^\s+1 '
+		else
+			LC_COLLATE=C sort -u -t $'\t'
+		fi
+	}
+
 
