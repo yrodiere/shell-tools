@@ -33,7 +33,7 @@ DIR=.
 PROPERTY_PATTERN='.*'
 COUNT_DUPLICATES=0
 
-while getopts 'dp' opt
+while getopts 'dp:' opt
 do
         case "$opt" in
                 d)
