@@ -27,7 +27,9 @@ function list() {
 			FILTERS=(-path '*/src/main/*' -path '*/src/test/*')
 			;;
 	esac
+	set -o xtrace
 	find $DIR -name '*.java' "${FILTERS[@]}" "$@"
+	set +o xtrace
 }
 
 function count() {
@@ -124,7 +126,9 @@ function git_diff() {
 			NEGATIVE_FILTERS=()
 			;;
 	esac
+	set -o xtrace
 	git diff --patch-with-stat --cherry-pick --right-only $RANGE -- "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
+	set +o xtrace
 }
 
 FEATURE=count
