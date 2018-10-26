@@ -6,16 +6,16 @@ function list() {
 	declare -a NEGATIVE_FILTERS
 	case "$FILTER" in
 		"api")
-			FILTERS=(-path '*/src/main/*' -not -path '*/impl/*' -not -path '*/spi/*')
+			FILTERS=(-path '*/src/main/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*" -not -path '*/spi/*')
 			;;
 		"spi")
-			FILTERS=(-path '*/src/main/*' -path '*/spi/*' -not -path '*/impl/*')
+			FILTERS=(-path '*/src/main/*' -path '*/spi/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*")
 			;;
 		"public")
-			FILTERS=(-path '*/src/main/*' -not -path '*/impl/*')
+			FILTERS=(-path '*/src/main/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*")
 			;;
 		"impl")
-			FILTERS=(-path '*/src/main/*' -path '*/impl/*' -not -path '*/spi/*')
+			FILTERS=(-path '*/src/main/*' -path "*/$INTERNAL_PACKAGE_MARKER/*" -not -path '*/spi/*')
 			;;
 		"main")
 			FILTERS=(-path '*/src/main/*')
@@ -60,18 +60,18 @@ function git_history() {
 	case "$FILTER" in
 		"api")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/impl/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=(':!*/spi/*' ":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
 			;;
 		"spi")
 			(( $# != 0 )) || DIRS=(":*/spi/*.java")
-			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
 			;;
 		"public")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
 			;;
 		"impl")
-			(( $# != 0 )) || DIRS=(":*/impl/*.java")
+			(( $# != 0 )) || DIRS=(":*/$INTERNAL_PACKAGE_MARKER/*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
 			;;
 		"main")
@@ -99,18 +99,18 @@ function git_diff() {
 	case "$FILTER" in
 		"api")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/impl/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=(':!*/spi/*' ":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
 			;;
 		"spi")
 			(( $# != 0 )) || DIRS=(":*/spi/*.java")
-			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
 			;;
 		"public")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(':!*/impl/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
 			;;
 		"impl")
-			(( $# != 0 )) || DIRS=(":*/impl/*.java")
+			(( $# != 0 )) || DIRS=(":*/$INTERNAL_PACKAGE_MARKER/*.java")
 			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
 			;;
 		"main")
@@ -133,8 +133,9 @@ function git_diff() {
 
 FEATURE=count
 FILTER=nontest
+INTERNAL_PACKAGE_MARKER=impl
 
-while getopts 'clbdhf:' opt
+while getopts 'clbdhf:i:' opt
 do
 	case "$opt" in
 		c)
@@ -162,6 +163,9 @@ do
 					exit 1
 					;;
 			esac
+			;;
+		i)
+			INTERNAL_PACKAGE_MARKER="$OPTARG"
 			;;
 		\?)
 			exit 1
