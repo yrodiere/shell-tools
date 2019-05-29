@@ -1,0 +1,22 @@
+#!/bin/bash -e
+
+VERSION=$1
+shift
+
+HOME_VARIABLE_NAME="GRAALVM${VERSION}_HOME"
+NEW_HOME=$(eval "echo \$${HOME_VARIABLE_NAME}")
+
+if ! [ -e "$NEW_HOME" ]
+then
+	echo 1>&2 "Unsupported graalvm version: '$VERSION'. Is '$HOME_VARIABLE_NAME' defined?"
+	exit 1
+fi
+
+echo 1>&2 "Graalvm Home: $NEW_HOME"
+export JAVA_HOME="$NEW_HOME"
+export GRAALVM_HOME="$NEW_HOME"
+export PATH="$NEW_HOME/bin:$PATH"
+java -version 1>&2
+
+exec $*
+
