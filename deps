@@ -2,11 +2,33 @@
 # Retrieve information about dependencies of an external Maven artifact
 
 TMPDIR=$(mktemp -d --tmpdir 'deps-XXXXXXXXXX')
+trap "rm -r '$TMPDIR'" EXIT
 
-echo 1>&2 "Downloading POM to $TMPDIR"
-mvn -q dependency:copy -Dartifact="$1:pom" -DoutputDirectory="$TMPDIR"
+MAVEN_OPTS=""
+COORDS=()
 
-mvn dependency:tree -f "$TMPDIR"/*.pom
+while (( $# > 0 ))
+do
+        case "$1" in
+                -*)
+                        MAVEN_OPTS+=" $1"
+                        ;;
+		*)
+			COORDS+=("$1")
+			;;
+	esac
+	shift
+done
 
-rm -r "$TMPDIR"
+echo 1>&2 "Downloading POMs to $TMPDIR"
+for COORD in "${COORDS[@]}"
+do
+	echo 1>&2 "Downloading POM of $COORD"
+	mvn -q $MAVEN_OPTS dependency:copy -Dartifact="$COORD:pom" -DoutputDirectory="$TMPDIR/$COORD/"
+done
+
+for COORD in "${COORDS[@]}"
+do
+	mvn dependency:tree -f "$TMPDIR/$COORD"/*.pom
+done
 
