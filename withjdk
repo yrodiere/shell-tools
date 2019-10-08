@@ -1,14 +1,18 @@
 #!/bin/bash -e
 
-VERSION=$1
+ARG=$1
 shift
 
-HOME_VARIABLE_NAME="JAVA${VERSION}_HOME"
+HOME_VARIABLE_NAME="JAVA${ARG}_HOME"
 NEW_HOME=$(eval "echo \$${HOME_VARIABLE_NAME}")
 
 if ! [ -e "$NEW_HOME" ]
 then
-	echo 1>&2 "Unsupported java version: '$VERSION'. Is '$HOME_VARIABLE_NAME' defined?"
+	NEW_HOME="${ARG}"
+fi
+if ! [ -e "$NEW_HOME" ]
+then
+	echo 1>&2 "Cannot find the JDK for '$ARG': environment variable '$HOME_VARIABLE_NAME' is not defined, and '$ARG' is not a valid path."
 	exit 1
 fi
 
