@@ -1,0 +1,36 @@
+#!/bin/bash -e
+# This script uses unzip, perl and jq
+
+# Extract the manifest
+# Clean up line separators
+# Join the "wrapped" lines (starting with a space)
+# Convert to JSON
+unzip -qq -c "$1" META-INF/MANIFEST.MF 2>/dev/null \
+	| perl -0777 -wpe 's/\r?\n/\n/g' \
+	| perl -0777 -wpe 's/\n //g' \
+	| jq --slurp --raw-input -S 'split("\n") | map(match("(\\S+): (.*)")) | map({
+		key: (. | .captures[0].string),
+		value: (. | .captures[1].string
+                        | [ scan("([^,;]+(?:;[^,;:=]+:?=(?:[^,;\"]+|\"[^\"]+\"))*)") ]
+			| map(
+				.[]
+				| split(";")
+				| {
+					key: (.[0]),
+					value: (.[1:]
+						| map(match("([^=:]+):?=(.*)";"g").captures | {
+							key: (.[0].string),
+							value: (.[1:]
+								| map(.string)
+								| map( scan("[^\"]+") )
+								| .[] | split(",")
+							)
+						})
+						| from_entries
+					)
+				}
+			)
+			| from_entries
+		)
+	}) | from_entries'
+
