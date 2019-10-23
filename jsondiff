@@ -1,0 +1,32 @@
+#!/bin/bash -e
+# This script uses npm, node.js,
+# and deep-diff: https://www.npmjs.com/package/deep-diff
+
+# Use temporary file so that bash command pipes ("<(cmd foo bar)") are supported
+FILE1=$(mktemp)
+FILE2=$(mktemp)
+cat "$1" >"$FILE1"
+cat "$2" >"$FILE2"
+
+export NODE_PATH="$(npm root --quiet -g)"
+
+{
+node - <<EOF
+'use strict';
+
+const fs = require('fs');
+const diff = require('deep-diff').diff;
+
+const path1 = '$FILE1'
+const path2 = '$FILE2'
+
+let rawdata1 = fs.readFileSync(path1).toString();
+let rawdata2 = fs.readFileSync(path2).toString();
+
+let object1 = JSON.parse(rawdata1);
+let object2 = JSON.parse(rawdata2);
+
+process.stdout.write(JSON.stringify(diff(object1, object2)))
+EOF
+} | jq
+
