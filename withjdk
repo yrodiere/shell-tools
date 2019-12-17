@@ -4,16 +4,21 @@ ARG=$1
 shift
 
 HOME_VARIABLE_NAME="JAVA${ARG}_HOME"
-NEW_HOME=$(eval "echo \$${HOME_VARIABLE_NAME}")
+PREFIXED_PATH="${HOME}/tools/java/jdk${ARG}"
 
+NEW_HOME="${ARG}"
 if ! [ -e "$NEW_HOME" ]
 then
-	NEW_HOME="${ARG}"
+        NEW_HOME="${PREFIXED_PATH}"
 fi
 if ! [ -e "$NEW_HOME" ]
 then
-	echo 1>&2 "Cannot find the JDK for '$ARG': environment variable '$HOME_VARIABLE_NAME' is not defined, and '$ARG' is not a valid path."
-	exit 1
+        NEW_HOME=$(eval "echo \$${HOME_VARIABLE_NAME}")
+fi
+if ! [ -e "$NEW_HOME" ]
+then
+        echo 1>&2 "Cannot find the JDK install for '$ARG': '$ARG' is not a valid path, nor is '$PREFIXED_PATH', and environment variable '$HOME_VARIABLE_NAME' is not defined."
+        exit 1
 fi
 
 echo 1>&2 "Java Home: $NEW_HOME"
