@@ -34,9 +34,6 @@ input_file = args[0]
 
 task_segments = {}
 
-#Format:
-#09:10:21,663 DEBUG BatchingExecutor:394 Processed 1000 works in executor 'Elasticsearch indexing orchestrator for index index_1'
-
 for line in fileinput.input(input_file):
     match = re.search(regex, line)
     if match is None:
