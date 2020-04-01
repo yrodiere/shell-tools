@@ -1,0 +1,82 @@
+#!/bin/env python3
+# Requires plotly: https://plotly.com/python/getting-started/
+
+import sys
+import getopt
+import plotly.figure_factory as ff
+import fileinput
+import datetime
+from datetime import datetime
+import re
+import math
+import gantt
+
+opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format="])
+
+regex = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
+datetime_format = '%Y-%M-%d %H:%M:%S,%f'
+label_format = '{scalar:d}'
+scalar_max = None
+
+for o, v in opts:
+    if o == "--regex":
+        regex = re.compile(v)
+    elif o == "--datetime-format":
+        datetime_format = v
+    elif o == "--label-format":
+        label_format = v
+    elif o == "--scalar-max":
+        scalar_max = int(v)
+    else:
+        assert False, "unhandled option"
+
+input_file = args[0]
+
+task_segments = {}
+
+#Format:
+#09:10:21,663 DEBUG BatchingExecutor:394 Processed 1000 works in executor 'Elasticsearch indexing orchestrator for index index_1'
+
+for line in fileinput.input(input_file):
+    match = re.search(regex, line)
+    if match is None:
+        continue
+    is_start = match.group('start') is not None
+
+    datetime_str = match.group('datetime')
+    thedatetime = datetime.strptime(datetime_str, datetime_format)
+
+    scalar_str = match.group('scalar')
+    scalar=int(scalar_str)
+
+    swimlane = match.group('swimlane')
+
+    #print(line)
+    #print({'is_start': is_start, 'thedatetime': thedatetime, 'scalar': scalar, 'swimlane': swimlane})
+
+    segments = task_segments.setdefault(swimlane, [])
+    if is_start:
+        segment = gantt.Task(start=thedatetime, score=scalar, end=None, label=label_format.format(scalar=scalar))
+        segments.append(segment)
+    else:
+        segment = segments[-1]
+        segment.end = thedatetime
+
+# Compute the max automatically if necessary
+if scalar_max is None:
+   scalar_max = 0
+   for (ignored, segments) in task_segments.items():
+       for segment in segments:
+           scalar = segment.score
+           if scalar > scalar_max:
+               scalar_max = scalar
+
+# Normalize scores using a logarithmic function
+for segments in task_segments.values():
+   for segment in segments:
+       scalar = segment.score
+       segment.score = math.log10(1 + float(scalar)/scalar_max*9)
+
+plot = gantt.create_gantt(task_segments, title=input_file)
+plot.show()
+
