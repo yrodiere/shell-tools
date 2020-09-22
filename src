@@ -4,9 +4,19 @@
 function list() {
 	(( $# > 0 )) && DIR="$1" && shift
 	declare -a TEST_FILTERS
-	TEST_FILTERS=('(' -path '*/src/test/*' -o -path "$INTEGRATION_TEST_MARKER/*" -o -path "*/$INTEGRATION_TEST_MARKER/*" ')')
+	TEST_FILTERS=('(' -path '*/src/test/*')
+ 	for marker in "${TEST_MARKERS[@]}"
+	do
+		TEST_FILTERS+=(-o -path "$marker/*" -o -path "*/$marker/*")
+	done
+	TEST_FILTERS+=(')')
 	declare -a IMPL_FILTERS
-	IMPL_FILTERS=('(' -path '*/src/main/*' -path "*/$INTERNAL_PACKAGE_MARKER/*" ')')
+	IMPL_FILTERS=('(' -path '*/src/main/*' '(' '-false')
+ 	for marker in "${INTERNAL_PACKAGE_MARKERS[@]}"
+	do
+		IMPL_FILTERS+=(-o -path "*/$marker/*")
+	done
+	IMPL_FILTERS+=(')' ')')
 	declare -a SPI_FILTERS
 	SPI_FILTERS=('(' -path '*/spi/*' ')')
 
@@ -75,9 +85,17 @@ function git_filters() {
 	declare -a NEGATIVE_FILTERS
 
 	declare -a NOT_TEST_FILTERS
-	NOT_TEST_FILTERS=(':!*/src/test/*' ":!$INTEGRATION_TEST_MARKER/*" ":!*/$INTEGRATION_TEST_MARKER/*")
+	NOT_TEST_FILTERS=(':!*/src/test/*')
+	for marker in "${TEST_MARKERS[@]}"
+	do
+		NOT_TEST_FILTERS+=(":!$marker/*" ":!*/$marker/*")
+	done
 	declare -a NOT_IMPL_FILTERS
-	NOT_IMPL_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*")
+	NOT_IMPL_FILTERS=()
+	for marker in "${TEST_MARKERS[@]}"
+	do
+		NOT_IMPL_FILTERS+=(":!*/$marker/*")
+	done
 	declare -a NOT_SPI_FILTERS
 	NOT_SPI_FILTERS=(':!*/spi/*')
 
@@ -117,8 +135,10 @@ function git_filters() {
 
 FEATURE=count
 FILTER=nontest
-INTERNAL_PACKAGE_MARKER=impl
-INTEGRATION_TEST_MARKER=integrationtest
+declare -a INTERNAL_PACKAGE_MARKER
+INTERNAL_PACKAGE_MARKER=()
+declare -a TEST_MARKERS
+TEST_MARKERS=()
 
 while getopts 'clbdhf:i:t:' opt
 do
@@ -150,16 +170,26 @@ do
 			esac
 			;;
 		i)
-			INTERNAL_PACKAGE_MARKER="$OPTARG"
+			INTERNAL_PACKAGE_MARKERS+=("$OPTARG")
 			;;
 		t)
-			INTEGRATION_TEST_MARKER="$OPTARG"
+			TEST_MARKERS+=("$OPTARG")
 			;;
 		\?)
 			exit 1
 			;;
 	esac
 done
+
+if (( ${#INTERNAL_PACKAGE_MARKERS[@]} == 0 ))
+then
+	INTERNAL_PACKAGE_MARKERS+=(impl internal checkstyle)
+fi
+
+if (( ${#TEST_MARKERS[@]} == 0 ))
+then
+	TEST_MARKERS+=('test' tests integrationtest integrationtests integration-test integration-tests)
+fi
 
 shift $(( OPTIND - 1 ))
 
