@@ -3,7 +3,7 @@
 
 function list() {
 	(( $# > 0 )) && DIR="$1" && shift
-	declare -a NEGATIVE_FILTERS
+	declare -a FILTERS
 	case "$FILTER" in
 		"api")
 			FILTERS=(-path '*/src/main/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*" -not -path '*/spi/*')
