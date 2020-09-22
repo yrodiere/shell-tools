@@ -33,12 +33,8 @@ function list() {
 }
 
 function count() {
-	for DIR in "${@}"
-	do
-		echo -n "$DIR: "
-		list "$DIR" -print0 \
-			| wc --files0-from - -l | tail -1 | sed -s 's/ total$//'
-	done
+	list "${@}" -print0 \
+		| wc --files0-from - -l | tail -1 | sed -s 's/ total$//'
 }
 
 function git_blame() {
