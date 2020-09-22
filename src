@@ -4,7 +4,7 @@
 function list() {
 	(( $# > 0 )) && DIR="$1" && shift
 	declare -a TEST_FILTERS
-	TEST_FILTERS=('(' -path '*/src/test/*' ')')
+	TEST_FILTERS=('(' -path '*/src/test/*' -o -path "$INTEGRATION_TEST_MARKER/*" -o -path "*/$INTEGRATION_TEST_MARKER/*" ')')
 	declare -a IMPL_FILTERS
 	IMPL_FILTERS=('(' -path '*/src/main/*' -path "*/$INTERNAL_PACKAGE_MARKER/*" ')')
 	declare -a SPI_FILTERS
@@ -75,7 +75,7 @@ function git_filters() {
 	declare -a NEGATIVE_FILTERS
 
 	declare -a NOT_TEST_FILTERS
-	NOT_TEST_FILTERS=(':!*/src/test/*')
+	NOT_TEST_FILTERS=(':!*/src/test/*' ":!$INTEGRATION_TEST_MARKER/*" ":!*/$INTEGRATION_TEST_MARKER/*")
 	declare -a NOT_IMPL_FILTERS
 	NOT_IMPL_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*")
 	declare -a NOT_SPI_FILTERS
@@ -103,7 +103,7 @@ function git_filters() {
 			NEGATIVE_FILTERS=("${NOT_TEST_FILTERS[@]}")
 			;;
 		"test")
-			(( $# != 0 )) || DIRS=(":*/src/test/*.java")
+			(( $# != 0 )) || DIRS=(":*/src/test/*.java" ":$INTEGRATION_TEST_MARKER/*" ":*/$INTEGRATION_TEST_MARKER/*")
 			NEGATIVE_FILTERS=()
 			;;
 		"all")
@@ -118,8 +118,9 @@ function git_filters() {
 FEATURE=count
 FILTER=nontest
 INTERNAL_PACKAGE_MARKER=impl
+INTEGRATION_TEST_MARKER=integrationtest
 
-while getopts 'clbdhf:i:' opt
+while getopts 'clbdhf:i:t:' opt
 do
 	case "$opt" in
 		c)
@@ -150,6 +151,9 @@ do
 			;;
 		i)
 			INTERNAL_PACKAGE_MARKER="$OPTARG"
+			;;
+		t)
+			INTEGRATION_TEST_MARKER="$OPTARG"
 			;;
 		\?)
 			exit 1
