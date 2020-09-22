@@ -24,7 +24,7 @@ function list() {
 			FILTERS=(-path '*/src/test/*')
 			;;
 		"all")
-			FILTERS=(-path '*/src/main/*' -path '*/src/test/*')
+			FILTERS=('(' -path '*/src/main/*' -o -path '*/src/test/*' ')')
 			;;
 	esac
 	set -o xtrace
