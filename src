@@ -3,28 +3,36 @@
 
 function list() {
 	(( $# > 0 )) && DIR="$1" && shift
+	declare -a TEST_FILTERS
+	TEST_FILTERS=('(' -path '*/src/test/*' ')')
+	declare -a IMPL_FILTERS
+	IMPL_FILTERS=('(' -path '*/src/main/*' -path "*/$INTERNAL_PACKAGE_MARKER/*" ')')
+	declare -a SPI_FILTERS
+	SPI_FILTERS=('(' -path '*/spi/*' ')')
+
 	declare -a FILTERS
+	FILTERS=()
 	case "$FILTER" in
 		"api")
-			FILTERS=(-path '*/src/main/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*" -not -path '*/spi/*')
+			FILTERS=(-path '*/src/main/*' -not "${IMPL_FILTERS[@]}" -not "${SPI_FILTERS[@]}")
 			;;
 		"spi")
-			FILTERS=(-path '*/src/main/*' -path '*/spi/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*")
+			FILTERS=(${SPI_FILTERS[@]})
 			;;
 		"public")
-			FILTERS=(-path '*/src/main/*' -not -path "*/$INTERNAL_PACKAGE_MARKER/*")
+			FILTERS=(-path '*/src/main/*' -not "${IMPL_FILTERS[@]}")
 			;;
 		"impl")
-			FILTERS=(-path '*/src/main/*' -path "*/$INTERNAL_PACKAGE_MARKER/*" -not -path '*/spi/*')
+			FILTERS=("${IMPL_FILTERS[@]}")
 			;;
 		"main")
 			FILTERS=(-path '*/src/main/*')
 			;;
 		"test")
-			FILTERS=(-path '*/src/test/*')
+			FILTERS=("${TEST_FILTERS[@]}")
 			;;
 		"all")
-			FILTERS=('(' -path '*/src/main/*' -o -path '*/src/test/*' ')')
+			FILTERS=()
 			;;
 	esac
 	set -o xtrace
@@ -50,68 +58,49 @@ function git_blame() {
 function git_history() {
 	local RANGE=$1
 	shift
-	declare -a DIRS
-	DIRS=("${@}")
-	declare -a NEGATIVE_FILTERS
-	case "$FILTER" in
-		"api")
-			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(':!*/spi/*' ":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
-			;;
-		"spi")
-			(( $# != 0 )) || DIRS=(":*/spi/*.java")
-			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
-			;;
-		"public")
-			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
-			;;
-		"impl")
-			(( $# != 0 )) || DIRS=(":*/$INTERNAL_PACKAGE_MARKER/*.java")
-			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
-			;;
-		"main")
-			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(":!*/src/test/*")
-			;;
-		"test")
-			(( $# != 0 )) || DIRS=(":*/src/test/*.java")
-			NEGATIVE_FILTERS=()
-			;;
-		"all")
-			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=()
-			;;
-	esac
-	tig log --cherry-pick --right-only $RANGE -- "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
+	tig log --cherry-pick --right-only $RANGE -- $(git_filters "$@")
 }
 
 function git_diff() {
 	local RANGE=$1
 	shift
+	set -o xtrace
+	git diff --patch-with-stat --cherry-pick --right-only $RANGE -- $(git_filters "$@")
+	set +o xtrace
+}
+
+function git_filters() {
 	declare -a DIRS
 	DIRS=("${@}")
 	declare -a NEGATIVE_FILTERS
+
+	declare -a NOT_TEST_FILTERS
+	NOT_TEST_FILTERS=(':!*/src/test/*')
+	declare -a NOT_IMPL_FILTERS
+	NOT_IMPL_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*")
+	declare -a NOT_SPI_FILTERS
+	NOT_SPI_FILTERS=(':!*/spi/*')
+
 	case "$FILTER" in
 		"api")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(':!*/spi/*' ":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
+			NEGATIVE_FILTERS=("${NOT_SPI_FILTERS[@]}" "${NOT_IMPL_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
 			;;
 		"spi")
 			(( $# != 0 )) || DIRS=(":*/spi/*.java")
-			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
+			NEGATIVE_FILTERS=("${NOT_IMPL_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
 			;;
 		"public")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(":!*/$INTERNAL_PACKAGE_MARKER/*" ':!*/src/test/*')
+			NEGATIVE_FILTERS=("${NOT_IMPL_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
 			;;
 		"impl")
 			(( $# != 0 )) || DIRS=(":*/$INTERNAL_PACKAGE_MARKER/*.java")
-			NEGATIVE_FILTERS=(':!*/spi/*' ':!*/src/test/*')
+			NEGATIVE_FILTERS=("${NOT_SPI_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
 			;;
 		"main")
 			(( $# != 0 )) || DIRS=(":*.java")
-			NEGATIVE_FILTERS=(":!*/src/test/*")
+			NEGATIVE_FILTERS=("${NOT_TEST_FILTERS[@]}")
 			;;
 		"test")
 			(( $# != 0 )) || DIRS=(":*/src/test/*.java")
@@ -122,10 +111,9 @@ function git_diff() {
 			NEGATIVE_FILTERS=()
 			;;
 	esac
-	set -o xtrace
-	git diff --patch-with-stat --cherry-pick --right-only $RANGE -- "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
-	set +o xtrace
+	echo "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
 }
+
 
 FEATURE=count
 FILTER=nontest
