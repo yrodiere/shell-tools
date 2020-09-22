@@ -14,19 +14,19 @@ function list() {
 	FILTERS=()
 	case "$FILTER" in
 		"api")
-			FILTERS=(-path '*/src/main/*' -not "${IMPL_FILTERS[@]}" -not "${SPI_FILTERS[@]}")
+			FILTERS=(-path '*/src/main/*' -not "${IMPL_FILTERS[@]}" -not "${SPI_FILTERS[@]}" -not "${TEST_FILTERS[@]}")
 			;;
 		"spi")
-			FILTERS=(${SPI_FILTERS[@]})
+			FILTERS=(${SPI_FILTERS[@]} -not "${TEST_FILTERS[@]}")
 			;;
 		"public")
-			FILTERS=(-path '*/src/main/*' -not "${IMPL_FILTERS[@]}")
+			FILTERS=(-path '*/src/main/*' -not "${IMPL_FILTERS[@]}" -not "${TEST_FILTERS[@]}")
 			;;
 		"impl")
-			FILTERS=("${IMPL_FILTERS[@]}")
+			FILTERS=("${IMPL_FILTERS[@]}" -not "${TEST_FILTERS[@]}")
 			;;
 		"main")
-			FILTERS=(-path '*/src/main/*')
+			FILTERS=(-path '*/src/main/*' -not "${TEST_FILTERS[@]}")
 			;;
 		"test")
 			FILTERS=("${TEST_FILTERS[@]}")
