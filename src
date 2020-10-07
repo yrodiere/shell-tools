@@ -92,7 +92,7 @@ function git_filters() {
 	done
 	declare -a NOT_IMPL_FILTERS
 	NOT_IMPL_FILTERS=()
-	for marker in "${TEST_MARKERS[@]}"
+	for marker in "${INTERNAL_PACKAGE_MARKERS[@]}"
 	do
 		NOT_IMPL_FILTERS+=(":!*/$marker/*")
 	done
