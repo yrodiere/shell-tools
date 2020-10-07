@@ -45,9 +45,7 @@ function list() {
 			FILTERS=()
 			;;
 	esac
-	set -o xtrace
-	find $DIR -name '*.java' "${FILTERS[@]}" "$@"
-	set +o xtrace
+	echo_and_run find $DIR -name '*.java' "${FILTERS[@]}" "$@"
 }
 
 function count() {
@@ -74,9 +72,7 @@ function git_history() {
 function git_diff() {
 	local RANGE=$1
 	shift
-	set -o xtrace
-	git diff --patch-with-stat --cherry-pick --right-only $RANGE -- $(git_filters "$@")
-	set +o xtrace
+	echo_and_run git diff --patch-with-stat --cherry-pick --right-only $RANGE -- $(git_filters "$@")
 }
 
 function git_filters() {
@@ -132,6 +128,10 @@ function git_filters() {
 	echo "${DIRS[@]}" "${NEGATIVE_FILTERS[@]}"
 }
 
+function echo_and_run() {
+	echo 1>&2 "Running command: ${@}"
+	${@}
+}
 
 FEATURE=count
 FILTER=nontest
