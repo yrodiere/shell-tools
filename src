@@ -130,7 +130,7 @@ function git_filters() {
 
 function echo_and_run() {
 	echo 1>&2 "Running command: ${@}"
-	${@}
+	"${@}"
 }
 
 FEATURE=count
