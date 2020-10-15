@@ -1,0 +1,28 @@
+#!/bin/bash
+# Rebuild as soon as Retrieve information about source code in one or more Maven projects
+
+WATCHED="$(pwd)"
+
+while getopts 'w:' opt
+do
+        case "$opt" in
+                w)
+                        WATCHED="$OPTARG"
+                        ;;
+                \?)
+                        exit 1
+                        ;;
+        esac
+done
+
+shift $(( OPTIND - 1 ))
+
+COMMAND=(${@})
+
+
+while true
+do
+	inotifywait $(find "$WATCHED" -name '.*' -prune -o -print) -e modify -e move -e create -e delete -e close_write
+	"${COMMAND[@]}"
+done
+
