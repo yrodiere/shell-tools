@@ -19,10 +19,10 @@ shift $(( OPTIND - 1 ))
 
 COMMAND=(${@})
 
+"${COMMAND[@]}"
 
 while true
 do
 	inotifywait $(find "$WATCHED" -name '.*' -prune -o -print) -e modify -e move -e create -e delete -e close_write
 	"${COMMAND[@]}"
 done
-
