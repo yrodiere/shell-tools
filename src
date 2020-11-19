@@ -3,6 +3,7 @@
 
 function list() {
 	(( $# > 0 )) && DIR="$1" && shift
+	[ -z "$DIR" ] && DIR="."
 	declare -a TEST_FILTERS
 	TEST_FILTERS=('(' -path '*/src/test/*')
  	for marker in "${TEST_MARKERS[@]}"
@@ -49,7 +50,8 @@ function list() {
 }
 
 function count() {
-	list "${@}" -print0 \
+	(( $# == 0 )) && set "."
+	list "${@}" -type f -print0 \
 		| wc --files0-from - -l | tail -1 | sed -s 's/ total$//'
 }
 
