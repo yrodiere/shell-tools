@@ -82,11 +82,23 @@ function git_filters() {
 	DIRS=("${@}")
 	declare -a NEGATIVE_FILTERS
 
+	declare -a TEST_FILTERS
+	TEST_FILTERS=(':!*/src/test/*.java')
+	for marker in "${TEST_MARKERS[@]}"
+	do
+		TEST_FILTERS+=(":$marker/*.java" ":*/$marker/*.java")
+	done
 	declare -a NOT_TEST_FILTERS
 	NOT_TEST_FILTERS=(':!*/src/test/*')
 	for marker in "${TEST_MARKERS[@]}"
 	do
 		NOT_TEST_FILTERS+=(":!$marker/*" ":!*/$marker/*")
+	done
+	declare -a IMPL_FILTERS
+	IMPL_FILTERS=()
+	for marker in "${INTERNAL_PACKAGE_MARKERS[@]}"
+	do
+		IMPL_FILTERS+=(":*/$marker/*.java")
 	done
 	declare -a NOT_IMPL_FILTERS
 	NOT_IMPL_FILTERS=()
@@ -104,22 +116,22 @@ function git_filters() {
 			;;
 		"spi")
 			(( $# != 0 )) || DIRS=(":*/spi/*.java")
-			NEGATIVE_FILTERS=("${NOT_IMPL_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
+			NEGATIVE_FILTERS=("${NOT_TEST_FILTERS[@]}")
 			;;
 		"public")
 			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=("${NOT_IMPL_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
 			;;
 		"impl")
-			(( $# != 0 )) || DIRS=(":*/$INTERNAL_PACKAGE_MARKER/*.java")
-			NEGATIVE_FILTERS=("${NOT_SPI_FILTERS[@]}" "${NOT_TEST_FILTERS[@]}")
+			(( $# != 0 )) || DIRS=("${IMPL_FILTERS[@]}")
+			NEGATIVE_FILTERS=("${NOT_TEST_FILTERS[@]}")
 			;;
 		"main")
 			(( $# != 0 )) || DIRS=(":*.java")
 			NEGATIVE_FILTERS=("${NOT_TEST_FILTERS[@]}")
 			;;
 		"test")
-			(( $# != 0 )) || DIRS=(":*/src/test/*.java" ":$INTEGRATION_TEST_MARKER/*" ":*/$INTEGRATION_TEST_MARKER/*")
+			(( $# != 0 )) || DIRS=("${TEST_FILTERS[@]}")
 			NEGATIVE_FILTERS=()
 			;;
 		"all")
