@@ -14,7 +14,7 @@ import gantt
 opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "show", "no-show"])
 
 regex = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
-datetime_format = '%Y-%M-%d %H:%M:%S,%f'
+datetime_format = '%Y-%m-%d %H:%M:%S.%f'
 label_format = '{scalar:d}'
 scalar_max = None
 show = True
