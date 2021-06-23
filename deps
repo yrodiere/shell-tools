@@ -29,6 +29,6 @@ done
 
 for COORD in "${COORDS[@]}"
 do
-	mvn dependency:tree -f "$TMPDIR/$COORD"/*.pom
+	mvn org.apache.maven.plugins:maven-dependency-plugin:3.1.2:tree -f "$TMPDIR/$COORD"/*.pom -Dscope=runtime
 done
 
