@@ -11,11 +11,12 @@ import re
 import math
 import gantt
 
-opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "show", "no-show"])
+opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "output-format=", "show", "no-show"])
 
 regex = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
 datetime_format = '%Y-%m-%d %H:%M:%S.%f'
 label_format = '{scalar:d}'
+output_format = 'svg'
 scalar_max = None
 show = True
 output = None
@@ -31,6 +32,8 @@ for o, v in opts:
         scalar_max = int(v)
     elif o == "--output":
         output = v
+    elif o == "--output-format":
+        output_format = v
     elif o == "--show":
         show = True
     elif o == "--no-show":
@@ -85,7 +88,7 @@ for segments in task_segments.values():
 plot = gantt.create_gantt(task_segments, title=input_file)
 
 if output:
-    plot.savefig(output, format='svg')
+    plot.savefig(output, format=output_format)
 if show:
     plot.show()
 
