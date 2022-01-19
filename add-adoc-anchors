@@ -1,0 +1,60 @@
+#!/bin/bash
+
+function log() {
+        echo 1>&2 "${@}"
+}
+
+function abort() {
+        log "${@}"
+        log 'Aborting.'
+        exit 1
+}
+
+function success() {
+        log "${@}"
+        exit 0
+}
+
+function usage() {
+        log -e "$(cat <<EOF
+Usage:
+	$0 [<root_directory>]
+        root_directory
+                The directory containing asciidoc to be processsed.
+                Defaults to '.'.
+EOF
+)"
+}
+
+DIR=.
+
+while getopts '' opt
+do
+        case "$opt" in
+                \?)
+			usage
+			abort
+                        ;;
+        esac
+done
+
+shift $(( OPTIND - 1 ))
+
+(( $# > 0 )) && DIR="$1" && shift
+(( $# > 0 )) && { usage; abort; }
+
+find "${DIR}" -name '*.asciidoc' -print0 | xargs -0 -n 1 awk -i inplace '
+{
+	if ( ( length(prev) == 0 || prev ~ /^$|[^]\n]$/ ) && $0 ~ /^=+[^=\[]+$/ ) {
+		anchor = tolower(gensub("(=+)\\s+([^=].*)","\\2","",$0));
+		anchor = gensub("[^-a-zA-Z0-9. ]","","g",anchor);
+		anchor = gensub("[- ._]+","_","g","_" anchor);
+		print gensub("(=+)\\s+([^=].*)","\\1 [[" anchor "]] \\2","g",$0);
+	}
+	else {
+		print;
+	}
+	prev = $0
+}
+'
+
