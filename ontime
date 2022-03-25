@@ -1,0 +1,4 @@
+#!/bin/bash -e
+# onetime - displays how long the current host was on each day
+
+last -x --time-format iso runlevel | grep -v "still running" | head -n -2 | awk '{gsub(/T.*/, "", $6); gsub(/[()]/, "", $9); print $6 " " $9}' | sort
