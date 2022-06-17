@@ -1,4 +1,150 @@
 #!/bin/bash -e
 # onetime - displays how long the current host was on each day
 
-last -x --time-format iso runlevel | grep -v "still running" | head -n -2 | awk '{gsub(/T.*/, "", $6); gsub(/[()]/, "", $9); print $6 " " $9}' | sort
+ELK_VERSION=8.2.3
+
+# To generate a dump, run `ontime -k` and then:
+# curl -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_export -H 'Content-Type: application/json' -d '{"type": ["index-pattern","dashboard"]}'
+function kibana_dump() {
+	cat <<'EOF'
+{"attributes":{"fieldAttrs":"{}","fields":"[]","runtimeFieldMap":"{}","timeFieldName":"@timestamp","title":"ontime*","typeMeta":"{}"},"coreMigrationVersion":"8.2.3","id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","migrationVersion":{"index-pattern":"8.0.0"},"references":[],"sort":[1655463651071,16],"type":"index-pattern","updated_at":"2022-06-17T11:00:51.071Z","version":"WzI1LDFd"}
+{"attributes":{"description":"","hits":0,"kibanaSavedObjectMeta":{"searchSourceJSON":"{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"},"optionsJSON":"{\"useMargins\":true,\"syncColors\":false,\"hidePanelTitles\":false}","panelsJSON":"[{\"version\":\"8.2.3\",\"type\":\"lens\",\"gridData\":{\"x\":0,\"y\":0,\"w\":48,\"h\":15,\"i\":\"cd83273a-1a28-46f9-8264-4eb3558415bd\"},\"panelIndex\":\"cd83273a-1a28-46f9-8264-4eb3558415bd\",\"embeddableConfig\":{\"attributes\":{\"title\":\"\",\"visualizationType\":\"lnsXY\",\"type\":\"lens\",\"references\":[{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-current-indexpattern\"},{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-layer-a49675ef-b54d-4af2-9a76-12a14d520656\"},{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-layer-881d9567-43f2-448d-a639-4a12377a555d\"},{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-layer-3b241b26-0d37-4620-b674-a17b6d114694\"},{\"type\":\"index-pattern\",\"name\":\"97f865c6-df7b-4417-9e31-dcb8006b9c8a\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\"}],\"state\":{\"visualization\":{\"title\":\"Empty XY chart\",\"legend\":{\"isVisible\":true,\"position\":\"right\"},\"valueLabels\":\"hide\",\"preferredSeriesType\":\"bar_stacked\",\"layers\":[{\"layerId\":\"a49675ef-b54d-4af2-9a76-12a14d520656\",\"accessors\":[\"1d19693a-8774-4bea-ba97-04510bb88957\"],\"position\":\"top\",\"seriesType\":\"bar_stacked\",\"showGridlines\":false,\"layerType\":\"data\",\"xAccessor\":\"c218a6d3-eb16-4639-b433-8563b4c7f6bc\"},{\"layerId\":\"881d9567-43f2-448d-a639-4a12377a555d\",\"layerType\":\"data\",\"accessors\":[\"02919a70-4886-43a9-a1cd-0298ac4177fa\"],\"seriesType\":\"line\",\"xAccessor\":\"5d610f96-0732-4aaa-94e1-248262bfbb49\"},{\"layerId\":\"3b241b26-0d37-4620-b674-a17b6d114694\",\"layerType\":\"referenceLine\",\"accessors\":[\"dff81db9-719d-413a-a417-60e74a93a2ca\"],\"yConfig\":[{\"forAccessor\":\"dff81db9-719d-413a-a417-60e74a93a2ca\",\"axisMode\":\"left\"}]}],\"fittingFunction\":\"Linear\"},\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filters\":[{\"meta\":{\"index\":\"97f865c6-df7b-4417-9e31-dcb8006b9c8a\",\"params\":{\"lt\":24,\"gte\":null},\"field\":\"duration\",\"alias\":null,\"negate\":false,\"disabled\":false,\"type\":\"range\",\"key\":\"duration\"},\"query\":{\"range\":{\"duration\":{\"lt\":24,\"gte\":null}}},\"$state\":{\"store\":\"appState\"}}],\"datasourceStates\":{\"indexpattern\":{\"layers\":{\"a49675ef-b54d-4af2-9a76-12a14d520656\":{\"columns\":{\"c218a6d3-eb16-4639-b433-8563b4c7f6bc\":{\"label\":\"@timestamp\",\"dataType\":\"date\",\"operationType\":\"date_histogram\",\"sourceField\":\"@timestamp\",\"isBucketed\":true,\"scale\":\"interval\",\"params\":{\"interval\":\"1d\",\"includeEmptyRows\":true,\"dropPartials\":false,\"ignoreTimeRange\":false}},\"1d19693a-8774-4bea-ba97-04510bb88957\":{\"label\":\"Sum of duration\",\"dataType\":\"number\",\"operationType\":\"sum\",\"sourceField\":\"duration\",\"isBucketed\":false,\"scale\":\"ratio\",\"params\":{\"emptyAsNull\":true}}},\"columnOrder\":[\"c218a6d3-eb16-4639-b433-8563b4c7f6bc\",\"1d19693a-8774-4bea-ba97-04510bb88957\"],\"incompleteColumns\":{}},\"881d9567-43f2-448d-a639-4a12377a555d\":{\"columns\":{\"5d610f96-0732-4aaa-94e1-248262bfbb49\":{\"label\":\"@timestamp\",\"dataType\":\"date\",\"operationType\":\"date_histogram\",\"sourceField\":\"@timestamp\",\"isBucketed\":true,\"scale\":\"interval\",\"params\":{\"interval\":\"1d\",\"includeEmptyRows\":true,\"dropPartials\":false,\"ignoreTimeRange\":false}},\"02919a70-4886-43a9-a1cd-0298ac4177fa\":{\"label\":\"Moving average by week\",\"dataType\":\"number\",\"operationType\":\"moving_average\",\"isBucketed\":false,\"scale\":\"ratio\",\"references\":[\"db22fc1c-721f-4e75-87e9-c9df4ac14c15\"],\"params\":{\"window\":7},\"customLabel\":true},\"db22fc1c-721f-4e75-87e9-c9df4ac14c15\":{\"label\":\"Sum of duration\",\"dataType\":\"number\",\"operationType\":\"sum\",\"sourceField\":\"duration\",\"isBucketed\":false,\"scale\":\"ratio\",\"params\":{\"emptyAsNull\":true}}},\"columnOrder\":[\"5d610f96-0732-4aaa-94e1-248262bfbb49\",\"02919a70-4886-43a9-a1cd-0298ac4177fa\",\"db22fc1c-721f-4e75-87e9-c9df4ac14c15\"],\"incompleteColumns\":{}},\"3b241b26-0d37-4620-b674-a17b6d114694\":{\"columns\":{\"dff81db9-719d-413a-a417-60e74a93a2ca\":{\"label\":\"Static value:  7,75\",\"dataType\":\"number\",\"operationType\":\"static_value\",\"isStaticValue\":true,\"isBucketed\":false,\"scale\":\"ratio\",\"params\":{\"value\":\"7.75\"},\"references\":[],\"customLabel\":true}},\"columnOrder\":[\"dff81db9-719d-413a-a417-60e74a93a2ca\"],\"incompleteColumns\":{}}}}}}},\"hidePanelTitles\":false,\"enhancements\":{}},\"title\":\"Duration per day\"},{\"version\":\"8.2.3\",\"type\":\"lens\",\"gridData\":{\"x\":0,\"y\":15,\"w\":48,\"h\":15,\"i\":\"aaa37f1c-62c0-491e-a4a9-2bc5be586a33\"},\"panelIndex\":\"aaa37f1c-62c0-491e-a4a9-2bc5be586a33\",\"embeddableConfig\":{\"attributes\":{\"title\":\"\",\"visualizationType\":\"lnsXY\",\"type\":\"lens\",\"references\":[{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-current-indexpattern\"},{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-layer-a49675ef-b54d-4af2-9a76-12a14d520656\"},{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-layer-881d9567-43f2-448d-a639-4a12377a555d\"},{\"type\":\"index-pattern\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\",\"name\":\"indexpattern-datasource-layer-3b241b26-0d37-4620-b674-a17b6d114694\"},{\"type\":\"index-pattern\",\"name\":\"fcf58c79-9f9b-4ebf-9a7c-e57db58c6cc1\",\"id\":\"c01c88f0-ee2c-11ec-abbb-4d34219d3daf\"}],\"state\":{\"visualization\":{\"title\":\"Empty XY chart\",\"legend\":{\"isVisible\":true,\"position\":\"right\"},\"valueLabels\":\"hide\",\"preferredSeriesType\":\"bar_stacked\",\"layers\":[{\"layerId\":\"a49675ef-b54d-4af2-9a76-12a14d520656\",\"accessors\":[\"1d19693a-8774-4bea-ba97-04510bb88957\"],\"position\":\"top\",\"seriesType\":\"bar_stacked\",\"showGridlines\":false,\"layerType\":\"data\",\"xAccessor\":\"c218a6d3-eb16-4639-b433-8563b4c7f6bc\"},{\"layerId\":\"881d9567-43f2-448d-a639-4a12377a555d\",\"layerType\":\"data\",\"accessors\":[\"02919a70-4886-43a9-a1cd-0298ac4177fa\"],\"seriesType\":\"line\",\"xAccessor\":\"5d610f96-0732-4aaa-94e1-248262bfbb49\"},{\"layerId\":\"3b241b26-0d37-4620-b674-a17b6d114694\",\"layerType\":\"referenceLine\",\"accessors\":[\"dff81db9-719d-413a-a417-60e74a93a2ca\"],\"yConfig\":[{\"forAccessor\":\"dff81db9-719d-413a-a417-60e74a93a2ca\",\"axisMode\":\"left\"}]}],\"fittingFunction\":\"Linear\"},\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filters\":[{\"meta\":{\"index\":\"fcf58c79-9f9b-4ebf-9a7c-e57db58c6cc1\",\"params\":{\"lt\":24,\"gte\":null},\"field\":\"duration\",\"alias\":null,\"negate\":false,\"disabled\":false,\"type\":\"range\",\"key\":\"duration\"},\"query\":{\"range\":{\"duration\":{\"lt\":24,\"gte\":null}}},\"$state\":{\"store\":\"appState\"}}],\"datasourceStates\":{\"indexpattern\":{\"layers\":{\"a49675ef-b54d-4af2-9a76-12a14d520656\":{\"columns\":{\"c218a6d3-eb16-4639-b433-8563b4c7f6bc\":{\"label\":\"@timestamp\",\"dataType\":\"date\",\"operationType\":\"date_histogram\",\"sourceField\":\"@timestamp\",\"isBucketed\":true,\"scale\":\"interval\",\"params\":{\"interval\":\"1w\",\"includeEmptyRows\":true,\"dropPartials\":false,\"ignoreTimeRange\":false}},\"1d19693a-8774-4bea-ba97-04510bb88957\":{\"label\":\"Sum of duration\",\"dataType\":\"number\",\"operationType\":\"sum\",\"sourceField\":\"duration\",\"isBucketed\":false,\"scale\":\"ratio\",\"params\":{\"emptyAsNull\":true}}},\"columnOrder\":[\"c218a6d3-eb16-4639-b433-8563b4c7f6bc\",\"1d19693a-8774-4bea-ba97-04510bb88957\"],\"incompleteColumns\":{}},\"881d9567-43f2-448d-a639-4a12377a555d\":{\"columns\":{\"5d610f96-0732-4aaa-94e1-248262bfbb49\":{\"label\":\"@timestamp\",\"dataType\":\"date\",\"operationType\":\"date_histogram\",\"sourceField\":\"@timestamp\",\"isBucketed\":true,\"scale\":\"interval\",\"params\":{\"interval\":\"1w\",\"includeEmptyRows\":true,\"dropPartials\":false,\"ignoreTimeRange\":false}},\"02919a70-4886-43a9-a1cd-0298ac4177fa\":{\"label\":\"Moving average by week\",\"dataType\":\"number\",\"operationType\":\"moving_average\",\"isBucketed\":false,\"scale\":\"ratio\",\"references\":[\"db22fc1c-721f-4e75-87e9-c9df4ac14c15\"],\"params\":{\"window\":7},\"customLabel\":true},\"db22fc1c-721f-4e75-87e9-c9df4ac14c15\":{\"label\":\"Sum of duration\",\"dataType\":\"number\",\"operationType\":\"sum\",\"sourceField\":\"duration\",\"isBucketed\":false,\"scale\":\"ratio\",\"params\":{\"emptyAsNull\":true}}},\"columnOrder\":[\"5d610f96-0732-4aaa-94e1-248262bfbb49\",\"02919a70-4886-43a9-a1cd-0298ac4177fa\",\"db22fc1c-721f-4e75-87e9-c9df4ac14c15\"],\"incompleteColumns\":{}},\"3b241b26-0d37-4620-b674-a17b6d114694\":{\"columns\":{\"dff81db9-719d-413a-a417-60e74a93a2ca\":{\"label\":\"Static value:  7,75\",\"dataType\":\"number\",\"operationType\":\"static_value\",\"isStaticValue\":true,\"isBucketed\":false,\"scale\":\"ratio\",\"params\":{\"value\":\"7.75\"},\"references\":[],\"customLabel\":true}},\"columnOrder\":[\"dff81db9-719d-413a-a417-60e74a93a2ca\"],\"incompleteColumns\":{}}}}}}},\"hidePanelTitles\":false,\"enhancements\":{}},\"title\":\"Duration per week\"}]","timeRestore":false,"title":"Duration","version":1},"coreMigrationVersion":"8.2.3","id":"1031de60-ee2f-11ec-abbb-4d34219d3daf","migrationVersion":{"dashboard":"8.2.0"},"references":[{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"cd83273a-1a28-46f9-8264-4eb3558415bd:indexpattern-datasource-current-indexpattern","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"cd83273a-1a28-46f9-8264-4eb3558415bd:indexpattern-datasource-layer-a49675ef-b54d-4af2-9a76-12a14d520656","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"cd83273a-1a28-46f9-8264-4eb3558415bd:indexpattern-datasource-layer-881d9567-43f2-448d-a639-4a12377a555d","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"cd83273a-1a28-46f9-8264-4eb3558415bd:indexpattern-datasource-layer-3b241b26-0d37-4620-b674-a17b6d114694","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"cd83273a-1a28-46f9-8264-4eb3558415bd:97f865c6-df7b-4417-9e31-dcb8006b9c8a","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"aaa37f1c-62c0-491e-a4a9-2bc5be586a33:indexpattern-datasource-current-indexpattern","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"aaa37f1c-62c0-491e-a4a9-2bc5be586a33:indexpattern-datasource-layer-a49675ef-b54d-4af2-9a76-12a14d520656","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"aaa37f1c-62c0-491e-a4a9-2bc5be586a33:indexpattern-datasource-layer-881d9567-43f2-448d-a639-4a12377a555d","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"aaa37f1c-62c0-491e-a4a9-2bc5be586a33:indexpattern-datasource-layer-3b241b26-0d37-4620-b674-a17b6d114694","type":"index-pattern"},{"id":"c01c88f0-ee2c-11ec-abbb-4d34219d3daf","name":"aaa37f1c-62c0-491e-a4a9-2bc5be586a33:fcf58c79-9f9b-4ebf-9a7c-e57db58c6cc1","type":"index-pattern"}],"sort":[1655464644422,184],"type":"dashboard","updated_at":"2022-06-17T11:17:24.422Z","version":"WzE5NCwxXQ=="}
+{"excludedObjects":[],"excludedObjectsCount":0,"exportedCount":2,"missingRefCount":0,"missingReferences":[]}
+EOF
+}
+
+function log() {
+        echo 1>&2 "${@}"
+}
+
+function abort() {
+        log "${@}"
+        log 'Aborting.'
+        exit 1
+}
+
+function success() {
+        log "${@}"
+        exit 0
+}
+
+function usage() {
+        log -e "$(cat <<EOF
+Usage:
+	$0 [<options>]
+        -c
+                Display as CSV
+        -k
+                Explore data in Elasticsearch + Kibana, started in a container
+EOF
+)"
+}
+
+function format_simple() {
+	awk '{gsub(/T.*/, "", $6); gsub(/[()]/, "", $9); print $6 " " $9}'
+}
+
+function format_csv() {
+	awk '{print $6 "," $8}' | while IFS=, read -r start end
+	do
+		# https://stackoverflow.com/a/12723330/6692043
+		# https://stackoverflow.com/a/8404392/6692043
+		duration=$(bc -l <<< "x = ( $(date --date="$end" +%s) - $(date --date="$start" +%s) ) / 60.0 / 60.0; if(x<1) print 0; x")
+		echo "$start,$end,$duration"
+	done
+}
+
+
+function display_stdout() {
+	sort -s -k 1 -t ','
+}
+
+function wait_success() {
+	while ! curl "$1"
+	do
+		log "Not available yet; waiting..."
+		sleep 2
+	done
+	log "Available."
+}
+
+function display_kibana() {
+	COMPOSE=$(mktemp)
+	cat >"$COMPOSE" <<EOF
+version: '3.2'
+
+services:
+  elasticsearch:
+    image: docker.io/elastic/elasticsearch:$ELK_VERSION
+    environment:
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      discovery.type: "single-node"
+      xpack.security.enabled: "false"
+    networks:
+      - elk
+    ports:
+      - "9200:9200"
+  kibana:
+    image: docker.io/elastic/kibana:$ELK_VERSION
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+
+networks:
+  elk:
+    driver: bridge
+EOF
+
+	log "Compose file:"
+	cat >&2 $COMPOSE
+	
+	trap "docker-compose -f $COMPOSE down -v ; rm $COMPOSE" EXIT
+	docker-compose -f $COMPOSE up --detach
+
+	log "Waiting for Elasticsearch to become available..."
+	wait_success http://localhost:5601
+
+	while IFS=, read -r start end duration
+	do
+		curl -XPOST -H 'Content-Type: application/json' 'http:/localhost:9200/ontime-steam/_doc' -d "{\"@timestamp\": \"$start\", \"end\": \"$end\", \"duration\": $duration}"
+	done
+
+	log "Waiting for Kibana to become available..."
+	wait_success http://localhost:5601
+
+	log "Importing dashboard..."
+	kibana_dump | curl -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson"
+
+	xdg-open http://localhost:5601/app/dashboards
+	log "Kibana should now be opened in your browser."
+	log "Press CTRL+C to stop..."
+	read -r -d '' _ </dev/tty
+}
+
+MODE=simple
+DISPLAY=stdout
+
+while getopts 'ck' opt
+do
+        case "$opt" in
+                c)
+			MODE=csv
+                        ;;
+                k)
+			MODE=csv
+			DISPLAY=kibana
+                        ;;
+                \?)
+			usage
+			abort
+                        ;;
+        esac
+done
+
+shift $(( OPTIND - 1 ))
+
+last -x --time-format iso runlevel | grep -v "still running" | head -n -2 \
+	| format_$MODE | display_$DISPLAY
