@@ -33,7 +33,9 @@ function usage() {
 Usage:
 	$0 [<options>]
         -c
-                Display as CSV
+                Display as CSV (default)
+        -s
+                Display using a simple format
         -k
                 Explore data in Elasticsearch + Kibana, started in a container
 EOF
@@ -128,12 +130,15 @@ EOF
 	read -r -d '' _ </dev/tty
 }
 
-MODE=simple
+MODE=csv
 DISPLAY=stdout
 
 while getopts 'ck' opt
 do
         case "$opt" in
+                s)
+			MODE=simple
+                        ;;
                 c)
 			MODE=csv
                         ;;
