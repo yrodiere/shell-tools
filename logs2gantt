@@ -12,48 +12,103 @@ import re
 import math
 import gantt
 
-opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "output-format=", "show", "no-show"])
+class Options:
+    regex: str = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
+    datetime_format: str = '%Y-%m-%d %H:%M:%S.%f'
+    label_format: str = '{scalar:d}'
+    scalar_max: int = None
+    output: str = None
+    output_format: str = 'svg'
+    show: bool = True
 
-regex = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
-datetime_format = '%Y-%m-%d %H:%M:%S.%f'
-label_format = '{scalar:d}'
-output_format = 'svg'
-scalar_max = None
-show = True
-output = None
+def usage():
+    defaults = Options()
+    return f"""Usage:    logs2gants [<options>] input_file
+
+    --help               Print this help message and exit.
+    --regex              A regex to extract information from logs.
+                         Default: {defaults.regex}
+                         Must include capture groups as follows:
+                             ?P<start>      An arbitrary group that, if matched, marks the log as representing the "start" of a segment.
+                                            Other logs matching the regexp but without a match for this group are considered as the "end" of a segment.
+                             ?P<datetime>   The date/time assigned to the segment.
+                             ?P<scalar>     The scalar value assigned to the segment (used for coloring).
+                             ?P<swimlane>   The identifier of the swimlane the segment belongs to.
+    --datetime-format    The format to use when extracting date/times.
+                         Default: {defaults.datetime_format}
+                         See https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+    --label-format       The format to use when rendering segment labels.
+                         Default: {defaults.label_format}
+                         Can rely on the following named parameters:
+                             scalar        The scalar value assigned to the segment.
+    --scalar-max         The maximum to use for the color scale of segments.
+                         Defaults to dynamically determining the max based on all segments.
+    --output             The name of a file to save the Gantt chart to.
+                         Default to not saving any file.
+    --output-format      The format of the saved file.
+                         Default: {defaults.output_format}
+                         Accepted values: 'png' or 'svg'.
+    --show               Whether to open a window to show the Gantt char.
+                         Default: {defaults.show}
+    """
+    
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "output-format=", "show", "no-show", "help"])
+except getopt.GetoptError as err:
+    print(err, file = sys.stderr)
+    print("", file = sys.stderr)
+    print(usage(), file = sys.stderr)
+    sys.exit(2)
+
+options = Options()
 
 for o, v in opts:
+    if o == "--help":
+        print(usage(), file = sys.stderr)
+        sys.exit(0)
     if o == "--regex":
-        regex = re.compile(v)
+        options.regex = re.compile(v)
     elif o == "--datetime-format":
-        datetime_format = v
+        options.datetime_format = v
     elif o == "--label-format":
-        label_format = v
+        options.label_format = v
     elif o == "--scalar-max":
-        scalar_max = int(v)
+        options.scalar_max = int(v)
     elif o == "--output":
-        output = v
+        options.output = v
     elif o == "--output-format":
-        output_format = v
+        options.output_format = v
     elif o == "--show":
-        show = True
+        options.show = True
     elif o == "--no-show":
-        show = False
+        options.show = False
     else:
         assert False, "unhandled option"
+
+if len(args) == 0:
+    print("Missing input_file argument", file = sys.stderr)
+    print("", file = sys.stderr)
+    print(usage(), file = sys.stderr)
+    sys.exit(2)
+if len(args) > 1:
+    print(f"Too many non-option arguments: {args}", file = sys.stderr)
+    print("", file = sys.stderr)
+    print(usage(), file = sys.stderr)
+    sys.exit(2)
 
 input_file = args[0]
 
 task_segments = {}
 
 for line in fileinput.input(input_file):
-    match = re.search(regex, line)
+    match = re.search(options.regex, line)
     if match is None:
         continue
     is_start = match.group('start') is not None
 
     datetime_str = match.group('datetime')
-    thedatetime = datetime.strptime(datetime_str, datetime_format)
+    thedatetime = datetime.strptime(datetime_str, options.datetime_format)
 
     scalar_str = match.group('scalar')
     scalar=int(scalar_str)
@@ -65,13 +120,18 @@ for line in fileinput.input(input_file):
 
     segments = task_segments.setdefault(swimlane, [])
     if is_start:
-        segment = gantt.Task(start=thedatetime, score=scalar, end=None, label=label_format.format(scalar=scalar))
+        segment = gantt.Task(start=thedatetime, score=scalar, end=None, label=options.label_format.format(scalar=scalar))
         segments.append(segment)
     else:
         segment = segments[-1]
         segment.end = thedatetime
 
+if len(task_segments) == 0:
+    print("No segment found", file = sys.stderr)
+    sys.exit(1)
+
 # Compute the max automatically if necessary
+scalar_max = options.scalar_max
 if scalar_max is None:
    scalar_max = 0
    for (ignored, segments) in task_segments.items():
@@ -88,8 +148,8 @@ for segments in task_segments.values():
 
 plot = gantt.create_gantt(task_segments, title=input_file)
 
-if output:
-    plot.savefig(output, format=output_format)
-if show:
+if options.output:
+    plot.savefig(options.output, format=options.output_format)
+if options.show:
     plot.show()
 
