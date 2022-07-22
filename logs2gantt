@@ -11,6 +11,7 @@ from datetime import datetime
 import re
 import math
 import gantt
+from pprint import pformat
 
 class Options:
     regex: str = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
@@ -20,6 +21,7 @@ class Options:
     output: str = None
     output_format: str = 'svg'
     show: bool = True
+    debug: bool = False
 
 def usage():
     defaults = Options()
@@ -50,11 +52,13 @@ def usage():
                          Accepted values: 'png' or 'svg'.
     --show               Whether to open a window to show the Gantt char.
                          Default: {defaults.show}
+    --debug              Print debug information during execution.
+                         Default: {defaults.debug}
     """
     
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "output-format=", "show", "no-show", "help"])
+    opts, args = getopt.getopt(sys.argv[1:], "", ["regex=", "datetime-format=", "scalar-max=", "label-format=", "output=", "output-format=", "show", "no-show", "help", "debug"])
 except getopt.GetoptError as err:
     print(err, file = sys.stderr)
     print("", file = sys.stderr)
@@ -83,8 +87,13 @@ for o, v in opts:
         options.show = True
     elif o == "--no-show":
         options.show = False
+    elif o == "--debug":
+        options.debug = True
     else:
         assert False, "unhandled option"
+
+if options.debug:
+    print(f"Options: {pformat(vars(options))}", file = sys.stderr)
 
 if len(args) == 0:
     print("Missing input_file argument", file = sys.stderr)
@@ -115,8 +124,9 @@ for line in fileinput.input(input_file):
 
     swimlane = match.group('swimlane')
 
-    #print(line)
-    #print({'is_start': is_start, 'thedatetime': thedatetime, 'scalar': scalar, 'swimlane': swimlane})
+    if options.debug:
+        print(line)
+        print({'is_start': is_start, 'thedatetime': thedatetime, 'scalar': scalar, 'swimlane': swimlane})
 
     segments = task_segments.setdefault(swimlane, [])
     if is_start:
