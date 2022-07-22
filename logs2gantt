@@ -1,5 +1,6 @@
 #!/bin/env python3
 # Requires plotly: https://plotly.com/python/getting-started/
+# Requires matplotlib: https://matplotlib.org/stable/users/getting_started/index.html
 
 import sys
 import getopt
