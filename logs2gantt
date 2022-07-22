@@ -16,7 +16,7 @@ from pprint import pformat
 class Options:
     regex: str = r"(?P<datetime>[^,]+),((?P<start>start)|end),(?P<scalar>[0-9]+),(?P<swimlane>.+)"
     datetime_format: str = '%Y-%m-%d %H:%M:%S.%f'
-    label_format: str = '{scalar:d}'
+    label_format: str = '{scalar:d} in {duration}'
     scalar_max: int = None
     output: str = None
     output_format: str = 'svg'
@@ -43,6 +43,7 @@ def usage():
                          Default: {defaults.label_format}
                          Can rely on the following named parameters:
                              scalar        The scalar value assigned to the segment.
+                             duration      The duration of the segment.
     --scalar-max         The maximum to use for the color scale of segments.
                          Defaults to dynamically determining the max based on all segments.
     --output             The name of a file to save the Gantt chart to.
@@ -134,11 +135,12 @@ for line in fileinput.input(input_file):
 
     segments = task_segments.setdefault(swimlane, [])
     if is_start:
-        segment = gantt.Task(start=thedatetime, score=scalar, end=None, label=options.label_format.format(scalar=scalar))
+        segment = gantt.Task(start=thedatetime, score=scalar, end=None, label=None)
         segments.append(segment)
     else:
         segment = segments[-1]
         segment.end = thedatetime
+        segment.label = options.label_format.format(scalar=scalar, duration=segment.end-segment.start)
 
 if len(task_segments) == 0:
     print("No segment found", file = sys.stderr)
