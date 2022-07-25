@@ -146,6 +146,13 @@ if len(task_segments) == 0:
     print("No segment found", file = sys.stderr)
     sys.exit(1)
 
+for segments in task_segments.values():
+    for segment in segments:
+        if segment.end is None:
+            print(f"Segment at {datetime.strftime(segment.start, options.datetime_format)} has no end; defaulting to end=start", file = sys.stderr)
+            segment.end = segment.start
+            segment.label = options.label_format.format(scalar=scalar, duration=segment.end-segment.start)
+
 if has_scalars:
     # Compute the max automatically if necessary
     scalar_max = options.scalar_max
