@@ -66,7 +66,7 @@ function display_stdout() {
 }
 
 function wait_success() {
-	while ! curl "${@}" --fail
+	while ! curl 1>/dev/null -s "${@}" --fail
 	do
 		log "Not available yet; waiting..."
 		sleep 2
@@ -124,7 +124,7 @@ EOF
 		while mapfile -n 50 lines && ((${#lines[@]}))
 		do
 			log "Indexing batch $(( i ++ ))..."
-			{ echo "${lines[@]}"; echo; echo; } | curl -XPOST --fail-with-body -H 'Content-Type: application/json' --data-binary '@-' 'http:/localhost:9200/ontime-stream/_bulk'
+			{ echo "${lines[@]}"; echo; echo; } | curl 1>/dev/null -s -S -XPOST --fail-with-body -H 'Content-Type: application/json' --data-binary '@-' 'http:/localhost:9200/ontime-stream/_bulk'
 		done
 	}
 
@@ -132,7 +132,7 @@ EOF
 	wait_success http://localhost:5601
 
 	log "Importing dashboard..."
-	kibana_dump | curl -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson" --fail-with-body
+	kibana_dump | curl 1>/dev/null -s -S -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson" --fail-with-body
 
 	xdg-open http://localhost:5601/app/dashboards
 	log "Kibana should now be opened in your browser."
