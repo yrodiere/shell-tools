@@ -116,8 +116,17 @@ EOF
 	log "Indexing..."
 	while IFS=, read -r start end duration
 	do
-		curl -XPOST -H 'Content-Type: application/json' 'http:/localhost:9200/ontime-steam/_doc' -d "{\"@timestamp\": \"$start\", \"end\": \"$end\", \"duration\": $duration}"
-	done
+		echo '{ "create" : { } }'
+		echo "{\"@timestamp\": \"$start\", \"end\": \"$end\", \"duration\": $duration}"
+	done | {
+		i=0
+		# https://stackoverflow.com/a/41268405/6692043
+		while mapfile -n 50 lines && ((${#lines[@]}))
+		do
+			log "Indexing batch $(( i ++ ))..."
+			{ echo "${lines[@]}"; echo; echo; } | curl -XPOST --fail-with-body -H 'Content-Type: application/json' --data-binary '@-' 'http:/localhost:9200/ontime-stream/_bulk'
+		done
+	}
 
 	log "Waiting for Kibana to become available..."
 	wait_success http://localhost:5601
