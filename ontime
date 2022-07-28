@@ -66,7 +66,7 @@ function display_stdout() {
 }
 
 function wait_success() {
-	while ! curl "$1"
+	while ! curl "${@}"
 	do
 		log "Not available yet; waiting..."
 		sleep 2
@@ -111,8 +111,9 @@ EOF
 	docker-compose -f $COMPOSE up --detach
 
 	log "Waiting for Elasticsearch to become available..."
-	wait_success http://localhost:5601
+	wait_success -H 'Content-Type: application/json' http://localhost:9200
 
+	log "Indexing..."
 	while IFS=, read -r start end duration
 	do
 		curl -XPOST -H 'Content-Type: application/json' 'http:/localhost:9200/ontime-steam/_doc' -d "{\"@timestamp\": \"$start\", \"end\": \"$end\", \"duration\": $duration}"
