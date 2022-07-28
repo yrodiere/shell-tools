@@ -66,7 +66,7 @@ function display_stdout() {
 }
 
 function wait_success() {
-	while ! curl "${@}"
+	while ! curl "${@}" --fail
 	do
 		log "Not available yet; waiting..."
 		sleep 2
@@ -132,7 +132,7 @@ EOF
 	wait_success http://localhost:5601
 
 	log "Importing dashboard..."
-	kibana_dump | curl -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson"
+	kibana_dump | curl -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson" --fail-with-body
 
 	xdg-open http://localhost:5601/app/dashboards
 	log "Kibana should now be opened in your browser."
