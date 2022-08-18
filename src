@@ -83,7 +83,7 @@ function git_filters() {
 	declare -a NEGATIVE_FILTERS
 
 	declare -a TEST_FILTERS
-	TEST_FILTERS=(':!*/src/test/*.java')
+	TEST_FILTERS=(':*/src/test/*.java')
 	for marker in "${TEST_MARKERS[@]}"
 	do
 		TEST_FILTERS+=(":$marker/*.java" ":*/$marker/*.java")
