@@ -165,5 +165,5 @@ done
 
 shift $(( OPTIND - 1 ))
 
-last -x --time-format iso runlevel | head -n -2 \
+last -x --time-format iso $(find /var/log/ -name 'wtmp*' 2>/dev/null | sed 's/^/-f /') runlevel | grep '^runlevel' \
 	| format_$MODE | display_$DISPLAY
