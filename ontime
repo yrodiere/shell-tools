@@ -132,7 +132,8 @@ EOF
 	wait_success http://localhost:5601
 
 	log "Importing dashboard..."
-	kibana_dump | curl 1>/dev/null -s -S -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson" --fail-with-body
+	kibana_dump | curl 1>/dev/null -s -S -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_import --form "file=@-;filename=file.ndjson" --fail-with-body \
+		|| log "Could not import dashboard; skipping."
 
 	xdg-open http://localhost:5601/app/dashboards
 	log "Kibana should now be opened in your browser."
