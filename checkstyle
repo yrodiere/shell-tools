@@ -1,5 +1,5 @@
 #!/bin/zsh -e
 
 mvn checkstyle:checkstyle-aggregate -Dcheckstyle.failOnViolation=false -DfailsOnError=false -fn -q \
-	-Dcheckstyle.output.format=plain -Dcheckstyle.output.file=>(cat)
+	-Dcheckstyle.output.format=plain -Dcheckstyle.output.file=>(cat) "${@}"
 
