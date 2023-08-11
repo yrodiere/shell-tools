@@ -1,5 +1,7 @@
 #!/bin/zsh -e
 
-mvn checkstyle:checkstyle-aggregate -Dcheckstyle.failOnViolation=false -DfailsOnError=false -fn -q \
-	-Dcheckstyle.output.format=plain -Dcheckstyle.output.file=>(cat) "${@}"
+echo 2>&1 "Starting audit..."
+mvn checkstyle:check -Dcheckstyle.failOnViolation=false -DfailsOnError=false -fn -q \
+	-Dcheckstyle.output.format=plain -Dcheckstyle.output.file=>(sed -E '/^Starting audit\.\.\.$|^Audit done\.$/d') "${@}"
+echo 2>&1 "Audit done."
 
