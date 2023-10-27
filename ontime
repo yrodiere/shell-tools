@@ -144,21 +144,21 @@ EOF
 	read -r -d '' _ </dev/tty
 }
 
-MODE=csv
-DISPLAY=stdout
+format=csv
+output=stdout
 
 while getopts 'ck' opt
 do
         case "$opt" in
                 s)
-			MODE=simple
+			format=simple
                         ;;
                 c)
-			MODE=csv
+			format=csv
                         ;;
                 k)
-			MODE=csv
-			DISPLAY=kibana
+			format=csv
+			output=kibana
                         ;;
                 \?)
 			usage
@@ -170,4 +170,4 @@ done
 shift $(( OPTIND - 1 ))
 
 last -x --time-format iso $(find /var/log/ -name 'wtmp*' 2>/dev/null | sed 's/^/-f /') runlevel | grep '^runlevel' \
-	| format_$MODE | display_$DISPLAY
+	| format_$format | display_$output
