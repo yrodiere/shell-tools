@@ -7,7 +7,7 @@ tmpfile=$(mktemp)
 
 echo 2>1 "Will output to $tmpfile"
 
-for filter in 'author:yrodiere' 'involves:yrodiere -author:yrodiere'
+for filter in 'author:@me' 'involves:@me -author:@me'
 do
   echo "================================================"
   echo "$filter"
