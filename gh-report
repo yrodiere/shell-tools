@@ -5,7 +5,7 @@ ghtoken=$(cat $HOME/.github/token-readonly)
 
 tmpfile=$(mktemp)
 
-echo 2>1 "Will output to $tmpfile"
+echo 1>&2 "Will output to $tmpfile"
 
 for filter in 'author:@me' 'involves:@me -author:@me'
 do
