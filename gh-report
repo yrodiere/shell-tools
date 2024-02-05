@@ -7,23 +7,36 @@ tmpfile=$(mktemp --suffix '.md')
 
 echo 1>&2 "Will output to $tmpfile"
 
+cutoff="$(date -I -u -d '7 days ago')"
+
+function fetch_page() {
+  echo 1>&2 "Fetching page $1 for type $issue_type and filter $filter"
+  curl --fail-with-body -s -S -G -X GET -L \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $ghtoken" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    https://api.github.com/search/issues \
+    -d "page=$i" -d 'per_page=100' -d 'sort=updated' -d 'order=desc' \
+    --data-urlencode "q=is:$issue_type $filter updated:>=$cutoff" \
+    | jq -r 'if (.items | length) > 0 then . else halt_error end'
+}
+
 for filter in 'author:@me' 'involves:@me -author:@me'
 do
   echo "================================================"
   echo "$filter"
   echo "------------------------------------------------"
   {
-    for type in issue pr
+    for issue_type in 'issue' 'pr'
     do
-      curl --fail-with-body -s -S -G -X GET -L \
-        -H "Accept: application/vnd.github+json" \
-        -H "Authorization: Bearer $ghtoken" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
-        https://api.github.com/search/issues \
-        -d 'per_page=100' -d 'sort=updated' -d 'order=desc' \
-        --data-urlencode "q=is:$type $filter updated:>=$(date -I -u -d '7 days ago')"
+      i=1
+      while fetch_page $i
+      do
+        ((i+=1))
+        echo 1>&2 "Fetching additional page $i..."
+      done
     done
-  } | jq -s -r 'if any(.["incomplete_results"]) then "More than 100 hits!" else if any(.["items"]) then map(.items) | flatten(1) | sort_by(.repository_url) | .[] | "[\(.repository_url | sub("^.*/repos/"; ""))#\(.number)](\(.html_url)) \(.title)" else . end end'
+  } | jq -s -r 'if any(.["items"]) then map(.items) | flatten(1) | sort_by(.repository_url) | .[] | "[\(.repository_url | sub("^.*/repos/"; ""))#\(.number)](\(.html_url)) \(.title)" else . end'
 done >"$tmpfile"
 
 xdg-open "$tmpfile"
