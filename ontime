@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # onetime - displays how long the current host was on each day
 
-ELK_VERSION=8.10.4
+ELK_VERSION=8.14.1
 
 # To generate a dump, run `ontime -k` and then:
 # curl -XPOST -H "kbn-xsrf: reporting" localhost:5601/api/saved_objects/_export -H 'Content-Type: application/json' -d '{"type": ["index-pattern","dashboard"]}'
