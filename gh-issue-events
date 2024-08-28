@@ -58,4 +58,4 @@ while fetch_page $i
 do
 	((i+=1))
 	echo 1>&2 "Fetching additional page $i..."
-done | jq -s -r ".[] | $filter | { \"type\": .event, \"url\": .issue.html_url, \"datetime\": .created_at }"
+done | jq -s -r ".[] | $filter | { \"type\": .event, \"url\": .issue.html_url, \"title\": .issue.title, \"datetime\": .created_at }"
