@@ -36,10 +36,16 @@ Usage:
                 Display as CSV (default)
         -s
                 Display using a simple format
+        -r
+                Display raw data
         -k
                 Explore data in Elasticsearch + Kibana, started in a container
 EOF
 )"
+}
+
+function format_raw() {
+	cat
 }
 
 function format_simple() {
@@ -148,7 +154,7 @@ EOF
 format=csv
 output=stdout
 
-while getopts 'ck' opt
+while getopts 'scrk' opt
 do
         case "$opt" in
                 s)
@@ -156,6 +162,9 @@ do
                         ;;
                 c)
 			format=csv
+                        ;;
+                r)
+			format=raw
                         ;;
                 k)
 			format=csv
