@@ -34,8 +34,6 @@ Usage:
 	$0 [<options>]
         -c
                 Display as CSV (default)
-        -s
-                Display using a simple format
         -r
                 Display raw data
         -k
@@ -46,10 +44,6 @@ EOF
 
 function format_raw() {
 	cat
-}
-
-function format_simple() {
-	grep -v 'still running' | awk '{gsub(/T.*/, "", $6); gsub(/[()]/, "", $9); print $6 " " $9}'
 }
 
 function format_csv() {
@@ -157,9 +151,6 @@ output=stdout
 while getopts 'scrk' opt
 do
         case "$opt" in
-                s)
-			format=simple
-                        ;;
                 c)
 			format=csv
                         ;;
