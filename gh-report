@@ -23,7 +23,7 @@ function fetch_page() {
 
 for who_filter in 'author:@me' 'involves:@me -author:@me'
 do
-  for issue_type in 'issue' 'pr'
+  for issue_type in 'pr' 'issue'
   do
     filter="is:$issue_type $who_filter updated:>=$cutoff"
     echo "================================================"
