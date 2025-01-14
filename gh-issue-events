@@ -6,6 +6,10 @@ function usage() {
 	echo 1>&2 "    $0 <owner>/<repo> [event type] [cutoff, ISO format (default 7 days ago)]"
 }
 
+function prop {
+    grep "${1}" "${2}" | cut -d'=' -f2
+}
+
 if (( $# < 1 ))
 then
 	usage
@@ -39,7 +43,7 @@ fi
 
 echo 1>&2 "Cutoff: $cutoff ($(date -Isecond -u -d @$cutoff)); filter: $filter"
 
-ghtoken=$(cat $HOME/.github/token-readonly)
+ghtoken=$(prop 'oauth' $HOME/.github)
 
 function fetch_page() {
   echo 1>&2 "Fetching page $1"

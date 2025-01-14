@@ -1,7 +1,11 @@
 #!/bin/bash -e
 # gh-report: generate a draft report from GitHub activity (with false positives: filter them out from the output before reporting!)
 
-ghtoken=$(cat $HOME/.github/token-readonly)
+function prop {
+    grep "${1}" "${2}" | cut -d'=' -f2
+}
+
+ghtoken=$(prop 'oauth' $HOME/.github)
 
 tmpfile=$(mktemp --suffix '.md')
 
