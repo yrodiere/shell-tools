@@ -13,11 +13,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 
 import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
 
@@ -40,7 +42,7 @@ public class GhAuthorInfo implements Callable<Void> {
     private static final java.util.logging.Logger log = java.util.logging.Logger
             .getLogger(GhAuthorInfo.class.getName());
 
-    Map<String, CollectedData> dataByAuthor = new HashMap<>();
+    Map<String, CollectedData> dataByAuthor = new TreeMap<>();
 
     @CommandLine.Option(names = { "-l", "--limit" },
              description = "Max number of commits to inspect for each author, additionally to the given commits. Set to 0 to only inspect the given commits.",
@@ -76,11 +78,10 @@ public class GhAuthorInfo implements Callable<Void> {
             log.log(Level.INFO, "fetching {0}", sha);
             var commit = repo.getCommit(sha);
             var author = commit.getAuthor();
-            var collectedData = dataByAuthor.computeIfAbsent(author == null ? null : author.getLogin(),
-                    login -> collectAuthorData(repo, login));
+            var collectedData = dataByAuthor.computeIfAbsent(author == null ? "<unknown GH user for commit " + sha + ">" : author.getLogin(),
+                    ignored -> collectAuthorInfo(repo, author));
             collectedData.providedCommitSHAs.add(sha);
-            collectedData.authorInfo.add(AuthorInfo.from(commit));
-            collectedData.processedCommitSHAs.add(sha);
+            collectAuthorInfo(collectedData, commit);
         }
 
         Format.MARKDOWN.print(System.out, dataByAuthor);
@@ -96,17 +97,24 @@ public class GhAuthorInfo implements Callable<Void> {
         return null;
     }
 
-    private CollectedData collectAuthorData(GHRepository repo, String login) {
-        var result = new CollectedData(login);
-        if (login == null || commitLimit == 0) {
+    private CollectedData collectAuthorInfo(GHRepository repo, GHUser user) {
+        var result = new CollectedData();
+
+        if (user == null) {
+            return result;
+        }
+
+        result.authorInfo.add(AuthorInfo.from(user));
+
+        var login = user.getLogin();
+        if (commitLimit == 0) {
             return result;
         }
         try {
             log.log(Level.INFO, "fetching commits by {0} (max {1})", new Object[] { login, commitLimit });
             int processedCount = 0;
             for (var commit : repo.queryCommits().author(login).pageSize(Math.min(100, commitLimit)).list()) {
-                result.authorInfo.add(AuthorInfo.from(commit));
-                result.processedCommitSHAs.add(commit.getSHA1());
+                collectAuthorInfo(result, commit);
                 ++processedCount;
                 if (processedCount >= commitLimit) {
                     break;
@@ -119,19 +127,43 @@ public class GhAuthorInfo implements Callable<Void> {
         return result;
     }
 
-    record CollectedData(String login, Set<String> providedCommitSHAs, Set<String> processedCommitSHAs,
+    private void collectAuthorInfo(CollectedData data, GHCommit commit) {
+        var commitAuthorInfo = AuthorInfo.from(commit);
+        if (commitAuthorInfo != null) {
+            data.authorInfo.add(commitAuthorInfo);
+        }
+        data.processedCommitSHAs.add(commit.getSHA1());
+    }
+
+
+    record CollectedData(Set<String> providedCommitSHAs, Set<String> processedCommitSHAs,
             Set<AuthorInfo> authorInfo) {
-        public CollectedData(String login) {
-            this(login, new LinkedHashSet<>(), new LinkedHashSet<>(), new LinkedHashSet<>());
+        public CollectedData() {
+            this(new LinkedHashSet<>(), new LinkedHashSet<>(), new LinkedHashSet<>());
         }
     }
 
     record AuthorInfo(String name, String email) {
+        public static AuthorInfo from(GHUser user) {
+            try {
+                var name = user.getName();
+                var email = user.getEmail();
+                if (name == null && email == null) {
+                    return null;
+                } 
+                return new AuthorInfo(name == null ? "<no name>" : name, email == null ? "<no email>" : email);
+            } catch (IOException e) {
+                throw new UncheckedIOException("Exception while retrieving author info for " + user.getLogin(), e);
+            }
+        }
         public static AuthorInfo from(GHCommit commit) {
             try {
-                var author = commit.getAuthor();
+                var author = commit.getCommitShortInfo().getAuthor();
                 var name = author == null ? null : author.getName();
                 var email = author == null ? null : author.getEmail();
+                if (name == null && email == null) {
+                    return null;
+                } 
                 return new AuthorInfo(name == null ? "<no name>" : name, email == null ? "<no email>" : email);
             } catch (IOException e) {
                 throw new UncheckedIOException("Exception while retrieving author info for " + commit.getSHA1(), e);
@@ -144,12 +176,7 @@ public class GhAuthorInfo implements Callable<Void> {
             @Override
             public void print(PrintStream out, Map<String, CollectedData> dataByAuthor) {
                 dataByAuthor.forEach((login, collectedData) -> {
-                    if (login == null) {
-                        out.printf("## <no GitHub user found>\n");
-                    }
-                    else {
-                        out.printf("## %s\n", login);
-                    }
+                    out.printf("## %s\n", login);
                     out.printf("Number of commits processed: %s\n", collectedData.processedCommitSHAs.size());
                     out.printf("Information found about the author:\n");
                     collectedData.authorInfo.forEach(info -> {
