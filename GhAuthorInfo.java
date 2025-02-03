@@ -78,8 +78,11 @@ public class GhAuthorInfo implements Callable<Void> {
             log.log(Level.INFO, "fetching {0}", sha);
             var commit = repo.getCommit(sha);
             var author = commit.getAuthor();
-            var collectedData = dataByAuthor.computeIfAbsent(author == null ? "<unknown GH user for commit " + sha + ">" : author.getLogin(),
-                    ignored -> collectAuthorInfo(repo, author));
+            if (author == null) {
+                log.log(Level.WARNING, "ignoring {0}, because no GitHub user is bound to it", sha);
+                continue;
+            }
+            var collectedData = dataByAuthor.computeIfAbsent(author.getLogin(), ignored -> collectAuthorInfo(repo, author));
             collectedData.providedCommitSHAs.add(sha);
             collectAuthorInfo(collectedData, commit);
         }
@@ -100,11 +103,10 @@ public class GhAuthorInfo implements Callable<Void> {
     private CollectedData collectAuthorInfo(GHRepository repo, GHUser user) {
         var result = new CollectedData();
 
-        if (user == null) {
-            return result;
+        var userInfo = AuthorInfo.from(user);
+        if (userInfo != null) {
+            result.authorInfo.add(userInfo);
         }
-
-        result.authorInfo.add(AuthorInfo.from(user));
 
         var login = user.getLogin();
         if (commitLimit == 0) {
@@ -128,11 +130,16 @@ public class GhAuthorInfo implements Callable<Void> {
     }
 
     private void collectAuthorInfo(CollectedData data, GHCommit commit) {
+        String sha = commit.getSHA1();
+        if (data.processedCommitSHAs.contains(sha)) {
+            // Already processed
+            return;
+        }
         var commitAuthorInfo = AuthorInfo.from(commit);
         if (commitAuthorInfo != null) {
             data.authorInfo.add(commitAuthorInfo);
         }
-        data.processedCommitSHAs.add(commit.getSHA1());
+        data.processedCommitSHAs.add(sha);
     }
 
 
