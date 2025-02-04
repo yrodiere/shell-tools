@@ -258,7 +258,8 @@ public class GhAuthorInfo implements Callable<Void> {
                 Set<String> remainingShas = new LinkedHashSet<>(info.commits);
                 for (var gitHubUser : info.gitHubUserInfoByLogin.values()) {
                     var nameAndEmails = gitHubUser.allNameAndEmails();
-                    if (nameAndEmails.size() == 1) {
+                    remainingShas.removeAll(gitHubUser.commits.keySet());
+                    if (!info.outputEvenIfNoExtraInfo && nameAndEmails.size() == 1) {
                         // Skip
                         continue;
                     }
