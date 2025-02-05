@@ -79,8 +79,6 @@ public class GhPrContains implements Callable<Void> {
         var repo = client.getRepository(repository);
 
         List<Integer> complyingPRs = new ArrayList<>();
-        List<Integer> ignoredPrsCauseOpen = new ArrayList<>();
-        List<Integer> ignoredPrsCauseBase = new ArrayList<>();
         Map<String, List<Integer>> offendingPrs = new LinkedHashMap<>();
         Map<String, GHUser> offendingUsers = new LinkedHashMap<>();
 
@@ -111,10 +109,6 @@ public class GhPrContains implements Callable<Void> {
             }
         }
 
-        System.out.printf("Ignored PRs due to being still open: %s\n",
-                ignoredPrsCauseOpen.isEmpty() ? "None" : join(ignoredPrsCauseOpen));
-        System.out.printf("Ignored PRs due to wrong base: %s\n",
-                ignoredPrsCauseBase.isEmpty() ? "None" : join(ignoredPrsCauseBase));
         System.out.printf("Complying PRs: %s\n", complyingPRs.isEmpty() ? "None" : join(complyingPRs));
         System.out.printf("Offending users/PRs:");
         if (offendingUsers.isEmpty()) {
