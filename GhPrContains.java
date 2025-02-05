@@ -157,7 +157,7 @@ public class GhPrContains implements Callable<Void> {
                     continue;
                 }
                 if (Compliance.COMPLIANT.equals(getCompliance(pr))) {
-                    complyingCommitsToPrUrl.put(commit.getSHA1(), pr.getUrl().toString());
+                    complyingCommitsToPrUrl.put(commit.getSHA1(), pr.getHtmlUrl().toString());
                 }
             } catch (IOException e) {
                 System.err.println("Failed to parse commit: " + commit.getSHA1());
