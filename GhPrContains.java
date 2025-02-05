@@ -1,6 +1,6 @@
 ///usr/bin/env jbang "$0" "$@" ; exit $?
 //JAVA 21+
-//DEPS org.kohsuke:github-api:1.123
+//DEPS org.kohsuke:github-api:1.326
 //DEPS info.picocli:picocli:4.7.6
 
 import java.io.IOException;
@@ -16,15 +16,19 @@ import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 
+import org.kohsuke.github.GHCommit;
+import org.kohsuke.github.GHCommitQueryBuilder;
 import org.kohsuke.github.GHDirection;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHPullRequestQueryBuilder;
+import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
@@ -53,6 +57,12 @@ public class GhPrContains implements Callable<Void> {
             defaultValue = "main", showDefaultValue = Help.Visibility.ALWAYS)
     private String baseBranch;
 
+    @CommandLine.Option(names = { "-c", "--commits" },
+            arity = "0",
+            description = "Suppress default output and list compliant commits instead of PRs, in CSV format, along with links to the corresponding PR.",
+            defaultValue = "false", showDefaultValue = Help.Visibility.ALWAYS)
+    private boolean commits;
+
     @Parameters(index = "0", description = "The repository to check; format: <org>/<repo>")
     private String repository;
 
@@ -61,6 +71,8 @@ public class GhPrContains implements Callable<Void> {
 
     @Parameters(index = "2", description = "The text to look for in PR descriptions")
     private String text;
+
+    private Map<Integer, Compliance> prCompliance = new LinkedHashMap<>();
 
     public static void main(String[] args) {
         int exitCode = new CommandLine(new GhPrContains()).execute(args);
@@ -78,6 +90,17 @@ public class GhPrContains implements Callable<Void> {
 
         var repo = client.getRepository(repository);
 
+        if (commits) {
+            listCommits(repo);
+        }
+        else {
+            listPRs(repo);
+        }
+
+        return null;
+    }
+
+    private void listPRs(GHRepository repo) throws IOException {
         List<Integer> complyingPRs = new ArrayList<>();
         Map<String, List<Integer>> offendingPrs = new LinkedHashMap<>();
         Map<String, GHUser> offendingUsers = new LinkedHashMap<>();
@@ -94,9 +117,7 @@ public class GhPrContains implements Callable<Void> {
                     break;
                 }
 
-                String body = pr.getBody();
-                body = body == null ? "" : body;
-                if (body.contains(text)) {
+                if (Compliance.COMPLIANT.equals(getCompliance(pr))) {
                     complyingPRs.add(pr.getNumber());
                 } else {
                     GHUser user = pr.getUser();
@@ -120,8 +141,61 @@ public class GhPrContains implements Callable<Void> {
                         join(offendingPrs.get(user.getLogin())));
             }
         }
+    }
 
+    private void listCommits(GHRepository repo) throws IOException {
+        Map<String, String> complyingCommitsToPrUrl = new LinkedHashMap<>();
+
+        for (var commit : repo.queryCommits()
+                .from(baseBranch)
+                .since(since.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                .list()) {
+            try {
+                GHPullRequest pr = getPullRequest(commit);
+                if (pr == null) {
+                    System.err.println("Failed to find pull request for commit: " + commit.getSHA1());
+                    continue;
+                }
+                if (Compliance.COMPLIANT.equals(getCompliance(pr))) {
+                    complyingCommitsToPrUrl.put(commit.getSHA1(), pr.getUrl().toString());
+                }
+            } catch (IOException e) {
+                System.err.println("Failed to parse commit: " + commit.getSHA1());
+            }
+        }
+
+        complyingCommitsToPrUrl.forEach((sha, prUrl) -> {
+            System.out.printf("%s,%s\n", sha, prUrl);
+        });
+    }
+
+    private GHPullRequest getPullRequest(GHCommit commit) throws IOException {
+        for (GHPullRequest pr: commit.listPullRequests()) {
+            if (!baseBranch.equals(pr.getBase().getRef())) {
+                // Some merge/backport PR -- we don't care.
+                continue;
+            }
+            return pr;
+        }
         return null;
+    }
+
+    private GhPrContains.Compliance getCompliance(GHPullRequest pr) {
+        return prCompliance.computeIfAbsent(pr.getNumber(), number -> {
+            String body = pr.getBody();
+            body = body == null ? "" : body;
+            if (body.contains(text)) {
+                return Compliance.COMPLIANT;
+            } else {
+                return Compliance.OFFENDING;
+            }
+        });
+    }
+    
+
+    private enum Compliance {
+        COMPLIANT,
+        OFFENDING;
     }
 
     private String join(List<Integer> list) {
