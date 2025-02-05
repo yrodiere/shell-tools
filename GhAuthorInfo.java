@@ -2,7 +2,6 @@
 //JAVA 21+
 //DEPS org.kohsuke:github-api:1.123
 //DEPS info.picocli:picocli:4.7.6
-//DEPS com.squareup.okhttp3:okhttp:4.12.0
 
 import java.io.IOException;
 import java.io.PrintStream;
