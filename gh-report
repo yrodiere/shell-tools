@@ -5,13 +5,15 @@ function prop {
     grep "${1}" "${2}" | cut -d'=' -f2
 }
 
+since=${*:-'7 days ago'}
+
 ghtoken=$(prop 'oauth' $HOME/.github)
 
 tmpfile=$(mktemp --suffix '.md')
 
 echo 1>&2 "Will output to $tmpfile"
 
-cutoff="$(date -I -u -d '7 days ago')"
+cutoff="$(date -I -u -d "$since")"
 
 function fetch_page() {
   echo 1>&2 "Fetching page $1 for filter $2"
