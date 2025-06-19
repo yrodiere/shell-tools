@@ -1,0 +1,65 @@
+#!/bin/bash -e
+# gh-issue-events: look for issue events of a given type on GitHub
+
+function usage() {
+	echo 1>&2 "Usage:"
+	echo 1>&2 "    $0 <owner>/<repo> [event type] [cutoff, ISO format (default 7 days ago)]"
+}
+
+function prop {
+    grep "${1}" "${2}" | cut -d'=' -f2
+}
+
+if (( $# < 1 ))
+then
+	usage
+	exit 1
+fi
+owner_repo=$1
+shift
+
+if (( $# > 0 ))
+then
+	filter="select(.type == \"$1\")"
+	shift
+else
+	filter="."
+fi
+
+
+if (( $# > 0 ))
+then
+	cutoff="$(date +%s -u -d "$1")"
+	shift
+else
+	cutoff="$(date +%s -u -d '7 days ago')"
+fi
+
+if (( $# > 0 ))
+then
+	usage
+	exit 1
+fi
+
+echo 1>&2 "Cutoff: $cutoff ($(date -Isecond -u -d @$cutoff)); filter: $filter"
+
+ghtoken=$(prop 'oauth' $HOME/.github)
+
+function fetch_page() {
+  echo 1>&2 "Fetching page $1"
+  curl --fail-with-body -s -S -G -X GET -L \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $ghtoken" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    https://api.github.com/repos/$owner_repo/events \
+    -d "page=$i" -d 'per_page=100' \
+    --data-urlencode "q=$2" \
+    | jq -r "[ .[] | select( (.created_at | fromdate) > $cutoff ) ] | if (length) > 0 then .[] else halt_error end"
+}
+
+i=1
+while fetch_page $i
+do
+	((i+=1))
+	echo 1>&2 "Fetching additional page $i..."
+done | jq -s -r ".[] | $filter"
