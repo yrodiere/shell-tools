@@ -24,7 +24,10 @@ function fetch_page() {
     https://api.github.com/search/issues \
     -d "page=$i" -d 'per_page=100' -d 'sort=updated' -d 'order=desc' \
     --data-urlencode "q=$2" \
-    | jq -r 'if (.items | length) > 0 then . else halt_error end'
+    --retry 3 \
+    --retry-all-errors \
+    --retry-delay 30 \
+    --retry-max-time 120
 }
 
 for who_filter in 'author:@me' 'involves:@me -author:@me'
@@ -37,9 +40,11 @@ do
     echo "------------------------------------------------"
     {
       i=1
-      while fetch_page $i "$filter"
+      while fetch_page $i "$filter" | jq -r '. | if .incomplete_results | not then halt_error(42) end' 2>&1
       do
         ((i+=1))
+	echo 1>&2 "Waiting to avoid hitting GitHub rate limits..."
+        sleep 10
         echo 1>&2 "Fetching additional page $i..."
       done
     } | jq -s -r 'if any(.["items"]) then map(.items) | flatten(1) | sort_by(.repository_url) | .[] | "[\(.repository_url | sub("^.*/repos/"; ""))#\(.number)](\(.html_url)) \(.title)" else . end'
