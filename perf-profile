@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root; calling sudo."
+   sudo $0 "${*}"
+   exit $?
+fi
+
+function set_perf() {
+  tuned-adm profile latency-performance
+  echo 1 > /proc/sys/kernel/perf_event_paranoid
+  echo 0 > /proc/sys/kernel/kptr_restrict
+  echo 0 > /proc/sys/kernel/randomize_va_space
+  cpupower frequency-set -g performance
+  grep -E '^cpu MHz' /proc/cpuinfo
+
+  echo "Performance profile is active; ready to start performance testing."
+}
+
+function unset_perf() {
+  tuned-adm profile desktop
+  # Re-enable ASLR
+  echo 2 > /proc/sys/kernel/randomize_va_space
+  grep -E '^cpu MHz' /proc/cpuinfo
+
+  echo "Desktop profile is active."
+}
+
+trap unset_perf EXIT
+
+set_perf
+
+read -n 1 -s -r -p "Press any key to restore the desktop profile."
+echo
