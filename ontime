@@ -47,9 +47,9 @@ function format_raw() {
 }
 
 function format_csv() {
-	awk '{print $6 "," $8}' | while IFS=, read -r start end
+	awk '{print $5 "," $7}' | while IFS=, read -r start end
 	do
-		if [ "$end" = 'running' ]
+		if [ "$end" = 'running' ] || [ "$end" = 'still' ]
 		then
 			end="$(date -Iseconds)"
 		fi
@@ -170,5 +170,7 @@ done
 
 shift $(( OPTIND - 1 ))
 
-last -x --time-format iso $(find /var/log/ -name 'wtmp*' 2>/dev/null | sed 's/^/-f /') runlevel | grep '^runlevel' \
+last -x --time-format iso $(find /var/log/ -name 'wtmp*' 2>/dev/null | sed 's/^/-f /') reboot \
+  | grep '^reboot' \
+  | grep -v ' crash ' \
 	| format_$format | display_$output
