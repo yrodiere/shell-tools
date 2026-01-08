@@ -2,8 +2,13 @@
 # gh-issue-events: look for issue events of a given type on GitHub
 
 function usage() {
-	echo 1>&2 "Usage:"
-	echo 1>&2 "    $0 <owner>/<repo> [event type] [cutoff, ISO format (default 7 days ago)]"
+	cat 1>&2 <<EOF
+Usage:
+    $0 <owner>/<repo> [event_type[,event_type...]] [cutoff]
+Parameters:
+	event_type: GitHub event "subtype", e.g. 'closed', 'opened', etc.
+	cutoff: date, ISO format (default 7 days ago)
+EOF
 }
 
 function prop {
@@ -20,7 +25,12 @@ shift
 
 if (( $# > 0 ))
 then
-	filter="select(.event == \"$1\")"
+	type=$(echo "$1" | awk -F '/' '{ print $1 }')
+	subtype=$(echo "$1" | awk -F '/' '{ print $2 }')
+
+	[ -n "$type" ] || usage
+  filter="select([.event] | inside([\"$(echo $type | sed 's/,/","/g')\"]))"
+
 	shift
 else
 	filter="."
@@ -53,7 +63,6 @@ function fetch_page() {
     -H "X-GitHub-Api-Version: 2022-11-28" \
     https://api.github.com/repos/$owner_repo/issues/events \
     -d "page=$i" -d 'per_page=100' \
-    --data-urlencode "q=$2" \
     | jq -r "[ .[] | select( (.created_at | fromdate) > $cutoff ) ] | if (length) > 0 then .[] else halt_error end"
 }
 
@@ -62,4 +71,4 @@ while fetch_page $i
 do
 	((i+=1))
 	echo 1>&2 "Fetching additional page $i..."
-done | jq -s -r ".[] | $filter | { \"type\": .event, \"url\": .issue.html_url, \"title\": .issue.title, \"datetime\": .created_at }"
+done | jq -s -r ".[] | $filter" | jq "{ \"type\": .event, \"url\": .issue.html_url, \"title\": .issue.title, \"datetime\": .created_at }"

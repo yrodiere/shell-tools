@@ -2,8 +2,14 @@
 # gh-issue-events: look for issue events of a given type on GitHub
 
 function usage() {
-	echo 1>&2 "Usage:"
-	echo 1>&2 "    $0 <owner>/<repo> [event type] [cutoff, ISO format (default 7 days ago)]"
+	cat 1>&2 <<EOF
+Usage:
+    $0 <owner>/<repo> [event_type[,event_type...]][/event_subtype[,event_subtype...]] [cutoff]
+Parameters:
+	event_type: GitHub event type, see https://docs.github.com/en/rest/using-the-rest-api/github-event-types?apiVersion=2022-11-28
+	event_subtype: GitHub event "subtype", e.g. 'closed', 'opened', etc.
+	cutoff: date, ISO format (default 7 days ago)
+EOF
 }
 
 function prop {
@@ -20,7 +26,17 @@ shift
 
 if (( $# > 0 ))
 then
-	filter="select(.type == \"$1\")"
+	type=$(echo "$1" | awk -F '/' '{ print $1 }')
+	subtype=$(echo "$1" | awk -F '/' '{ print $2 }')
+
+	[ -n "$type" ] || usage
+  filter="select([.type] | inside([\"$(echo $type | sed 's/,/","/g')\"]))"
+
+	if [ -n "$subtype" ]
+	then
+    filter="$filter | select([.payload.action] | inside([\"$(echo $subtype | sed 's/,/","/g')\"]))"
+  fi
+
 	shift
 else
 	filter="."
@@ -53,7 +69,6 @@ function fetch_page() {
     -H "X-GitHub-Api-Version: 2022-11-28" \
     https://api.github.com/repos/$owner_repo/events \
     -d "page=$i" -d 'per_page=100' \
-    --data-urlencode "q=$2" \
     | jq -r "[ .[] | select( (.created_at | fromdate) > $cutoff ) ] | if (length) > 0 then .[] else halt_error end"
 }
 
