@@ -202,7 +202,7 @@ fi
 
 if (( ${#TEST_MARKERS[@]} == 0 ))
 then
-	TEST_MARKERS+=('test' tests integrationtest integrationtests integration-test integration-tests)
+	TEST_MARKERS+=('test' tests integrationtest integrationtests integration-test integration-tests legacyTest functionalTest '/it/')
 fi
 
 shift $(( OPTIND - 1 ))
