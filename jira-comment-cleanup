@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+URL="${1:?Usage: $0 <https://your-site.atlassian.net/browse/ISSUE-123>}"
+SITE="${URL%%/browse/*}"
+ISSUE_KEY="${URL##*/}"
+if [ "$SITE" = "$URL" ] || [ -z "$ISSUE_KEY" ]; then
+  echo "Error: could not parse site and issue key from: $URL" >&2
+  exit 1
+fi
+KEEP=50                       # <-- how many most-recent comments to keep
+AUTH_EMAIL="${JIRA_EMAIL}"
+API_TOKEN="${JIRA_API_TOKEN}"
+
+PAGE_SIZE=100
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+SKIPPED=0
+START_AT=0
+DELETED=0
+TO_DELETE=0
+CONFIRMED=false
+
+while true; do
+  curl -sS -f -u "${AUTH_EMAIL}:${API_TOKEN}" \
+    "${SITE}/rest/api/3/issue/${ISSUE_KEY}/comment?startAt=${START_AT}&maxResults=${PAGE_SIZE}&orderBy=-created" \
+    > "$tmp"
+
+  TOTAL="$(jq -r '.total' < "$tmp")"
+  [ "$TOTAL" -gt "$KEEP" ] || break
+
+  if [ "$TO_DELETE" -eq 0 ]; then
+    TO_DELETE=$((TOTAL - KEEP))
+    echo "Found ${TOTAL} comments; will delete ${TO_DELETE}, keeping newest ${KEEP}."
+  fi
+
+  while IFS= read -r cid; do
+    if [ "$SKIPPED" -lt "$KEEP" ]; then
+      SKIPPED=$((SKIPPED + 1))
+    else
+      if [ "$CONFIRMED" = false ]; then
+        echo "First comment to delete:"
+        jq -r --arg id "$cid" '
+          .comments[] | select(.id == $id) |
+          "  Author:  \(.author.displayName)\n  Created: \(.created)\n  Preview: \([.. | .text? // empty] | join(" ") | .[0:120])"
+        ' < "$tmp"
+        printf "Proceed? [y/N] " >/dev/tty
+        read -r yn < /dev/tty
+        [[ "$yn" =~ ^[Yy] ]] || { echo "Aborted."; exit 0; }
+        CONFIRMED=true
+      fi
+
+      curl -sS -f -u "${AUTH_EMAIL}:${API_TOKEN}" -X DELETE \
+        "${SITE}/rest/api/3/issue/${ISSUE_KEY}/comment/${cid}"
+      DELETED=$((DELETED + 1))
+      printf "\r  %d / %d deleted..." "$DELETED" "$TO_DELETE"
+    fi
+  done < <(jq -r '.comments[].id' < "$tmp")
+
+  START_AT=$KEEP
+done
+
+[ "$DELETED" -eq 0 ] || printf "\n"
+echo "Done. Deleted ${DELETED} comments."
